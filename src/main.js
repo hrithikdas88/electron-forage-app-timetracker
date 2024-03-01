@@ -1,4 +1,13 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  ipcMain,
+  shell,
+  dialog,
+  desktopCapturer,
+  screen,
+} = require("electron");
+const { exec } = require("child_process");
 const path = require("path");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -43,6 +52,7 @@ if (!gotTheLock) {
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(() => {
     createWindow();
+    setInterval(logCursorPosition, 1000);
   });
 
   app.on("open-url", (event, url) => {
@@ -50,6 +60,11 @@ if (!gotTheLock) {
     dialog.showErrorBox("Welcome Back", `You arrived from: ${url}`);
   });
 }
+
+// function logCursorPosition() {
+//   const cursorPosition = screen.getCursorScreenPoint();
+//   console.log("Cursor Position:", cursorPosition);
+// }
 
 const createWindow = () => {
   // Create the browser window.
@@ -114,5 +129,59 @@ app.on("activate", () => {
   }
 });
 
+//ss-logic
+
+ipcMain.on("capture-screenshot", async (event) => {
+  const screenShotInfo = await captureScreen();
+
+  const dataURL = screenShotInfo.toDataURL();
+  event.sender.send("screenshot-captured", dataURL);
+});
+
+async function captureScreen() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const options = {
+    types: ["screen"],
+    thumbnailSize: {
+      width: primaryDisplay.size.width,
+      height: primaryDisplay.size.height,
+    },
+    screen: {
+      id: primaryDisplay.id,
+    },
+  };
+
+  const sources = await desktopCapturer.getSources(options);
+
+  const image = sources[0].thumbnail;
+  return image;
+}
+
+function logCursorPosition() {
+  // Execute xdotool to get the cursor position
+  exec("xdotool getmouselocation", (error, stdout, stderr) => {
+    if (error) {
+      console.error(`Error getting cursor position: ${stderr}`);
+      return;
+    }
+
+    const cursorPosition = parseCursorPosition(stdout);
+    console.log("Cursor Position:", cursorPosition);
+  });
+}
+
+function parseCursorPosition(xdotoolOutput) {
+  const regex = /x:(\d+) y:(\d+)/;
+  const match = xdotoolOutput.match(regex);
+
+  if (match) {
+    return {
+      x: parseInt(match[1]),
+      y: parseInt(match[2]),
+    };
+  }
+
+  return null;
+}
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.

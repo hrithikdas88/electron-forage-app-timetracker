@@ -5,6 +5,7 @@ import { useState } from "react";
 
 const Entry = () => {
   const [data, setData] = useState("");
+  console.log(data);
   window.indexBridge.authSucess((event, data) => {
     console.log(data.commandLine[2]);
     if (data.commandLine[2] === "electron://open") {
@@ -12,9 +13,15 @@ const Entry = () => {
     }
   });
 
-  //  const handleclick = () => {
+  const ss = async () => {
+    await window.screenshot.captureScreenShot();
+    window.screenshot.screenShotCaptured((event, dataURL) => {
+      console.log(dataURL);
+      // setImg(dataURL);
+      // setUrlReached(true);
+    });
+  };
 
-  //  }
   console.log(data);
   const ipcHandle = () => window.openExternalLink();
   return (
@@ -24,8 +31,10 @@ const Entry = () => {
 
       <p>
         Then: Launch the app from a web link!
-        <a href="electron://open">Click here to launch the app</a>
+        <a href="electron://open111">Click here to launch the app</a>
       </p>
+
+      <button onClick={ss}>Click ss</button>
     </div>
   );
 };
