@@ -52,7 +52,8 @@ if (!gotTheLock) {
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(() => {
     createWindow();
-    setInterval(logCursorPosition, 1000);
+    setInterval(logCursorPosition, 10000);
+    console.log(screen.getAllDisplays(), "sssssss");
   });
 
   app.on("open-url", (event, url) => {
@@ -61,11 +62,6 @@ if (!gotTheLock) {
   });
 }
 
-// function logCursorPosition() {
-//   const cursorPosition = screen.getCursorScreenPoint();
-//   console.log("Cursor Position:", cursorPosition);
-// }
-
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
@@ -73,6 +69,7 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+      devTools: false,
     },
   });
 
@@ -91,29 +88,6 @@ ipcMain.on("content-to-renderer", (event, content) => {
 });
 
 ipcMain.on("ping", () => shell.openExternal("http://localhost:3002/"));
-
-// app.whenReady().then(() => {
-//   createWindow();
-
-//   // const expressApp = express();
-//   // expressApp.use(cors());
-
-//   // expressApp.use(express.json());
-
-//   // expressApp.post("/receive-data", (req, res) => {
-//   //   const data = req.body;
-//   //   console.log("Received data from React app:", data);
-//   //   if (data) {
-//   //     mainWindow.webContents.send("content-to-renderer", data);
-//   //   }
-//   //   res.json({ success: true });
-//   // });
-
-//   // const server = http.createServer(expressApp);
-//   // server.listen(3150, () => {
-//   //   console.log("Express server listening on port 3150");
-//   // });
-// });
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -157,8 +131,10 @@ async function captureScreen() {
   return image;
 }
 
+let previousPosition = null;
+let isDialogDisplayed = false;
+
 function logCursorPosition() {
-  // Execute xdotool to get the cursor position
   exec("xdotool getmouselocation", (error, stdout, stderr) => {
     if (error) {
       console.error(`Error getting cursor position: ${stderr}`);
@@ -167,6 +143,25 @@ function logCursorPosition() {
 
     const cursorPosition = parseCursorPosition(stdout);
     console.log("Cursor Position:", cursorPosition);
+
+    if (
+      previousPosition &&
+      cursorPosition.x === previousPosition.x &&
+      cursorPosition.y === previousPosition.y
+    ) {
+      if (!isDialogDisplayed) {
+        dialog.showMessageBox({
+          type: "info",
+          title: "Idle Alert",
+          message: "System is idle!",
+        });
+        isDialogDisplayed = true;
+      }
+    } else {
+      isDialogDisplayed = false;
+    }
+
+    previousPosition = { x: cursorPosition.x, y: cursorPosition.y };
   });
 }
 
@@ -183,5 +178,3 @@ function parseCursorPosition(xdotoolOutput) {
 
   return null;
 }
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
