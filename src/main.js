@@ -9,6 +9,8 @@ const {
 } = require("electron");
 const { exec } = require("child_process");
 const path = require("path");
+const fs = require("fs");
+const { execSync } = require("child_process");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -52,8 +54,7 @@ if (!gotTheLock) {
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(() => {
     createWindow();
-    setInterval(logCursorPosition, 10000);
-    console.log(screen.getAllDisplays(), "sssssss");
+    // setInterval(logCursorPosition, 10000);
   });
 
   app.on("open-url", (event, url) => {
@@ -78,6 +79,8 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+  // startMouseMovementDetection();
+  startKeyboardMovementDetection();
 };
 
 // app.on('ready', createWindow);
@@ -130,51 +133,94 @@ async function captureScreen() {
   const image = sources[0].thumbnail;
   return image;
 }
+// function getKeyboardDevices() {
+//   const inputDirectory = "/dev/input/";
+//   const inputFiles = fs.readdirSync(inputDirectory);
 
-let previousPosition = null;
-let isDialogDisplayed = false;
+//   return inputFiles
+//     .filter((file) => file.startsWith("event"))
+//     .map((file) => `${inputDirectory}${file}`);
+// }
 
-function logCursorPosition() {
-  exec("xdotool getmouselocation", (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Error getting cursor position: ${stderr}`);
-      return;
-    }
+// function startMouseMovementDetection() {
+//   console.log("Mouse movement detection started.");
 
-    const cursorPosition = parseCursorPosition(stdout);
-    console.log("Cursor Position:", cursorPosition);
+//   const mouseCommand = "cat /dev/input/mice";
+//   const mouseChild = exec(mouseCommand);
 
-    if (
-      previousPosition &&
-      cursorPosition.x === previousPosition.x &&
-      cursorPosition.y === previousPosition.y
-    ) {
-      if (!isDialogDisplayed) {
-        dialog.showMessageBox({
-          type: "info",
-          title: "Idle Alert",
-          message: "System is idle!",
-        });
-        isDialogDisplayed = true;
-      }
-    } else {
-      isDialogDisplayed = false;
-    }
+//   mouseChild.stdout.on("data", (data) => {
+//     if (data) {
+//       console.log("mouse is moving");
+//       console.count(data)
+//     }
+//   });
 
-    previousPosition = { x: cursorPosition.x, y: cursorPosition.y };
+//   mouseChild.on("error", (err) => {
+//     console.error("Mouse Error:", err.message);
+//   });
+
+//   mouseChild.on("exit", (code) => {
+//     console.log("Mouse movement detection process exited with code", code);
+//   });
+
+//   mainWindow.on("closed", () => {
+//     mainWindow = null;
+//     mouseChild.kill();
+//   });
+// }
+
+function startKeyboardMovementDetection() {
+  console.log("Keyboard movement detection started.");
+  const inputDevice = getInputDevicePath();
+
+  const keyboardCommand = `cat ${inputDevice} `;
+  const keyboardChild = exec(keyboardCommand);
+
+  keyboardChild.stdout.on("data", (data) => {
+    console.log(data);
+  });
+
+  keyboardChild.on("error", (err) => {
+    console.error("Keyboard Error:", err.message);
+  });
+
+  keyboardChild.on("exit", (code) => {
+    console.log("Keyboard movement detection process exited with code", code);
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    keyboardChild.kill();
   });
 }
 
-function parseCursorPosition(xdotoolOutput) {
-  const regex = /x:(\d+) y:(\d+)/;
-  const match = xdotoolOutput.match(regex);
+const COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER =
+  "grep -E 'Handlers|EV=' /proc/bus/input/devices |" +
+  "grep -B1 'EV=120013' |" +
+  "grep -Eo 'event[0-9]+' |" +
+  "grep -Eo '[0-9]+' |" +
+  "tr -d '\n'";
 
-  if (match) {
-    return {
-      x: parseInt(match[1]),
-      y: parseInt(match[2]),
-    };
+function executeCommand(cmd) {
+  try {
+    console.log("loll");
+    const result = execSync(cmd, { encoding: "utf-8" });
+    return result.trim();
+  } catch (error) {
+    console.error(`Error executing command: ${error.message}`);
+    process.exit(1);
   }
-
-  return null;
 }
+
+function getInputDevicePath() {
+  const eventNumber = executeCommand(COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER);
+  return `/dev/input/event${eventNumber}`;
+}
+
+// function main() {
+//   const inputDevicePath = getInputDevicePath();
+//   console.log("successs")
+//   console.log(inputDevicePath);
+// }
+
+// main();
