@@ -70,7 +70,7 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      devTools: false,
+      // devTools: false,
     },
   });
 
@@ -79,7 +79,7 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
-  // startMouseMovementDetection();
+  startMouseMovementDetection();
   startKeyboardMovementDetection();
 };
 
@@ -133,41 +133,33 @@ async function captureScreen() {
   const image = sources[0].thumbnail;
   return image;
 }
-// function getKeyboardDevices() {
-//   const inputDirectory = "/dev/input/";
-//   const inputFiles = fs.readdirSync(inputDirectory);
 
-//   return inputFiles
-//     .filter((file) => file.startsWith("event"))
-//     .map((file) => `${inputDirectory}${file}`);
-// }
+function startMouseMovementDetection() {
+  console.log("Mouse movement detection started.");
 
-// function startMouseMovementDetection() {
-//   console.log("Mouse movement detection started.");
+  const mouseCommand = "cat /dev/input/mice";
+  const mouseChild = exec(mouseCommand);
 
-//   const mouseCommand = "cat /dev/input/mice";
-//   const mouseChild = exec(mouseCommand);
+  mouseChild.stdout.on("data", (data) => {
+    if (data) {
+      console.log("mouse is moving");
+      console.count(data);
+    }
+  });
 
-//   mouseChild.stdout.on("data", (data) => {
-//     if (data) {
-//       console.log("mouse is moving");
-//       console.count(data)
-//     }
-//   });
+  mouseChild.on("error", (err) => {
+    console.error("Mouse Error:", err.message);
+  });
 
-//   mouseChild.on("error", (err) => {
-//     console.error("Mouse Error:", err.message);
-//   });
+  mouseChild.on("exit", (code) => {
+    console.log("Mouse movement detection process exited with code", code);
+  });
 
-//   mouseChild.on("exit", (code) => {
-//     console.log("Mouse movement detection process exited with code", code);
-//   });
-
-//   mainWindow.on("closed", () => {
-//     mainWindow = null;
-//     mouseChild.kill();
-//   });
-// }
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    mouseChild.kill();
+  });
+}
 
 function startKeyboardMovementDetection() {
   console.log("Keyboard movement detection started.");
@@ -216,11 +208,3 @@ function getInputDevicePath() {
   const eventNumber = executeCommand(COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER);
   return `/dev/input/event${eventNumber}`;
 }
-
-// function main() {
-//   const inputDevicePath = getInputDevicePath();
-//   console.log("successs")
-//   console.log(inputDevicePath);
-// }
-
-// main();
