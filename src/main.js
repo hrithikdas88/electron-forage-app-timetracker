@@ -136,16 +136,33 @@ async function captureScreen() {
 
 function startMouseMovementDetection() {
   console.log("Mouse movement detection started.");
-
   const mouseCommand = "cat /dev/input/mice";
   const mouseChild = exec(mouseCommand);
+  let lastMovementTime = Date.now();
+  let secondsWithoutMovement = 0;
 
   mouseChild.stdout.on("data", (data) => {
     if (data) {
-      console.log("mouse is moving");
+      lastMovementTime = Date.now();
+      secondsWithoutMovement = 0;
       console.count(data);
     }
   });
+
+  setInterval(() => {
+    const now = Date.now();
+    const timeSinceMovement = now - lastMovementTime;
+    if (timeSinceMovement > 10000) {
+      // 1 second threshold
+      secondsWithoutMovement++;
+
+      console.log(
+        "No mouse movement detected for",
+        secondsWithoutMovement,
+        "seconds."
+      );
+    }
+  }, 1000);
 
   mouseChild.on("error", (err) => {
     console.error("Mouse Error:", err.message);
@@ -168,8 +185,11 @@ function startKeyboardMovementDetection() {
   const keyboardCommand = `cat ${inputDevice} `;
   const keyboardChild = exec(keyboardCommand);
 
+  let Keyboarddata;
+
   keyboardChild.stdout.on("data", (data) => {
-    console.log(data);
+  console.log(data)
+      
   });
 
   keyboardChild.on("error", (err) => {
