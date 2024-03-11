@@ -188,7 +188,7 @@ function startKeyboardMovementDetection() {
   let Keyboarddata;
 
   keyboardChild.stdout.on("data", (data) => {
-  console.log(data)
+  // console.log(data)
       
   });
 
