@@ -11,6 +11,7 @@ const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
+const { spawn } = require('child_process');
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -34,8 +35,11 @@ const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();
+  console.log("nolock")
 } else {
   app.on("second-instance", (event, commandLine, workingDirectory) => {
+
+    console.log("yess")
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -59,6 +63,7 @@ if (!gotTheLock) {
 
   app.on("open-url", (event, url) => {
     console.log("open-url event triggered:", url);
+
     dialog.showErrorBox("Welcome Back", `You arrived from: ${url}`);
   });
 }
@@ -79,8 +84,38 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
-  startMouseMovementDetection();
-  startKeyboardMovementDetection();
+  console.log(process.platform)
+  if (process.platform === "linux"){
+    startMouseMovementDetection();
+    startKeyboardMovementDetection();
+  } else if (process.platform === "win32"){
+    console.log("youareonwindows")
+ 
+  const scriptPath = path.join(app.getPath('desktop'), 'Get-MousePosition.ps1');
+  const powershellProcess = spawn('powershell.exe', ['-File', scriptPath]);
+  powershellProcess.stdout.on('data', (data) => {
+    if(!data){
+      console.log("no data")
+   } else {
+    console.log(`PowerShell Output: ${data}`);
+   }
+  });
+
+  powershellProcess.stderr.on('data', (data) => {
+    if(!data){
+        console.log("no data")
+     } else {
+      console.log(`PowerShell Output: ${data}`);
+     }
+    console.error(`PowerShell Error: ${data}`);
+  });
+
+  }
+  mainWindow.on('closed', () => {
+    powershellProcess.kill();
+    mainWindow = null;
+  });
+ 
 };
 
 // app.on('ready', createWindow);

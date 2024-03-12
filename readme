@@ -3,3 +3,6 @@ in ubuntu to access keyboard and mouse use
 sudo cat /dev/input/event3 (keyboard)   //keyboard can be in any event
 sudo cat /dev/input/mice (mouse)
 
+
+in windows to access keyboard and mouse 
+script

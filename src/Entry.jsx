@@ -35,7 +35,7 @@ const Entry = () => {
       {!data ? `login to see your projects` : <ProjectList />}
       <p>
         Then: Launch the app from a web link!
-        <a href="electron://open">Click here to launch the app</a>
+        <a href="electron://open">Click here to launch the app dsdsadsa</a>
       </p>
       <button onClick={ss}>Click ss</button>
     </div>
