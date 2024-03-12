@@ -5,4 +5,4 @@ sudo cat /dev/input/mice (mouse)
 
 
 in windows to access keyboard and mouse 
-script
+scripts are used to access powershell
