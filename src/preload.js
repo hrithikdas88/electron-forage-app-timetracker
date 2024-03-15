@@ -12,7 +12,9 @@ contextBridge.exposeInMainWorld("openExternalLink", () => {
 });
 let indexBridge = {
   authSucess: (callback) => ipcRenderer.on("content-to-renderer", callback),
+  addedtime : (callback) => ipcRenderer.on("added-time", callback)
 };
+
 
 contextBridge.exposeInMainWorld("indexBridge", indexBridge);
 

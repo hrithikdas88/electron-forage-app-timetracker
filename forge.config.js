@@ -44,6 +44,14 @@ module.exports = {
                 js: './src/preload.js',
               },
             },
+            {
+              html: './src/idle.html',
+              js: './src/idle.js',
+              name:'idle_window',
+              preload:{
+                js:'./src/idlePreload.js' 
+              }
+            }
           ],
         },
       },

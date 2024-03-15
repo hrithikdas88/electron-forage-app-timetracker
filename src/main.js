@@ -8,9 +8,12 @@ const {
   screen,
 } = require("electron");
 const { exec } = require("child_process");
+const { spawn } = require("child_process");
+
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
+const { response } = require("express");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -18,7 +21,10 @@ if (require("electron-squirrel-startup")) {
 }
 
 let mainWindow;
+let lastMovementTimestamp;
+let intervalId;
 
+// intervalId = setInterval(checkIdle, 10000);
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
     app.setAsDefaultProtocolClient("electron", process.execPath, [
@@ -54,7 +60,8 @@ if (!gotTheLock) {
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(() => {
     createWindow();
-    // setInterval(logCursorPosition, 10000);
+
+    // lastMovementTimestamp = Date.now();
   });
 
   app.on("open-url", (event, url) => {
@@ -70,15 +77,19 @@ const createWindow = () => {
     height: 600,
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+
       // devTools: false,
     },
   });
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  // mainWindow.loadFile("index.html")
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  //linux logic
   startMouseMovementDetection();
   startKeyboardMovementDetection();
 };
@@ -134,6 +145,24 @@ async function captureScreen() {
   return image;
 }
 
+// function to update time
+let movementTimestamps = [];
+let idleTime = 0;
+function calculateActivityPercentage(arr, val) {
+  const arrLength = arr.length;
+  if (arrLength === 0) {
+    idleTime++;
+    console.log("no activity");
+    console.log(`You are idle for ${idleTime * 2}  minits`);
+  } else {
+    const percentage = (arrLength / val) * 100;
+    idleTime = 0;
+    console.log("Activity percentage:", percentage);
+  }
+}
+
+//linux mouse and keyboard detection
+
 function startMouseMovementDetection() {
   console.log("Mouse movement detection started.");
 
@@ -142,8 +171,22 @@ function startMouseMovementDetection() {
 
   mouseChild.stdout.on("data", (data) => {
     if (data) {
-      console.log("mouse is moving");
-      console.count(data);
+      //lastMovementTimestamp = Date.now();
+
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+
+        if (movementTimestamps.length > 120) {
+          movementTimestamps.shift();
+        }
+      }
+      console.log(idleTime, "idletime");
+      console.log(movementTimestamps, "mouse");
     }
   });
 
@@ -159,17 +202,36 @@ function startMouseMovementDetection() {
     mainWindow = null;
     mouseChild.kill();
   });
+  // console.log(movementTimestamps, "movements");
 }
 
 function startKeyboardMovementDetection() {
   console.log("Keyboard movement detection started.");
   const inputDevice = getInputDevicePath();
-
   const keyboardCommand = `cat ${inputDevice} `;
   const keyboardChild = exec(keyboardCommand);
 
   keyboardChild.stdout.on("data", (data) => {
-    console.log(data);
+    // console.log(data);
+    lastMovementTimestamp = Date.now();
+    if (data) {
+      //lastMovementTimestamp = Date.now();
+
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+
+        if (movementTimestamps.length > 120) {
+          movementTimestamps.shift();
+        }
+      }
+      console.log(idleTime, "idletime");
+      console.log(movementTimestamps, "keyboard");
+    }
   });
 
   keyboardChild.on("error", (err) => {
@@ -185,6 +247,52 @@ function startKeyboardMovementDetection() {
     keyboardChild.kill();
   });
 }
+
+setInterval(() => {
+  calculateActivityPercentage(movementTimestamps, 120);
+  movementTimestamps = [];
+}, 120000);
+
+//check idle time
+
+// let idleWindow;
+// const IDLE_TIME_THRESHOLD = 10000;
+// let isidlewindowPresent;
+// isidlewindowPresent = false;
+// intervalId = setInterval(() => {
+//   const currentTime = Date.now();
+//   const idletime = currentTime - lastMovementTimestamp;
+//   // console.log(idletime, "idle");
+//   // if (idletime >= IDLE_TIME_THRESHOLD) {
+//   //   if (!isidlewindowPresent) {
+//   //     isidlewindowPresent = true;
+//   //     console.log("if");
+//   //     idleWindow = new BrowserWindow({
+//   //       width: 400,
+//   //       height: 600,
+//   //       webPreferences: {
+//   //         preload: IDLE_WINDOW_PRELOAD_WEBPACK_ENTRY,
+//   //       },
+//   //     });
+//   //     idleWindow.loadURL(IDLE_WINDOW_WEBPACK_ENTRY);
+//   //     idleWindow.webContents.send("idletime", {
+//   //       idletime,
+//   //     });
+//   //     idleWindow.on("closed", () => {
+//   //       isidlewindowPresent = false;
+//   //     });
+//   //   } else {
+//   //     console.log("else");
+//   //     idleWindow.webContents.send("idletime", {
+//   //       idletime,
+//   //     });
+//   //   }
+//   // }
+// }, 10000);
+
+// function clearIdleInterval() {
+//   clearInterval(intervalId);
+// }
 
 const COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER =
   "grep -E 'Handlers|EV=' /proc/bus/input/devices |" +
