@@ -6,10 +6,11 @@ const {
   dialog,
   desktopCapturer,
   screen,
+  nativeImage,
+  Notification,
 } = require("electron");
 const { exec } = require("child_process");
 const { spawn } = require("child_process");
-
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
@@ -101,7 +102,61 @@ ipcMain.on("content-to-renderer", (event, content) => {
   console.log("Content received in main process:", content);
 });
 
-ipcMain.on("ping", () => shell.openExternal("http://localhost:3002/"));
+// ipcMain.on("ping", () => {
+//   takeScreenshotAndSendBlob(mainWindow);
+// });
+
+ipcMain.on("ping", () => {
+  const screenshotProcess = exec(
+    "/usr/bin/gnome-screenshot -d 2 -f screenshotoll.png",
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.error(`stderr: ${stderr}`);
+        return;
+      }
+      console.log(`stdout: ${stdout}`);
+
+      // Read the screenshot.png file and convert it into a Blob
+      fs.readFile("screenshotoll.png", (err, data) => {
+        if (err) {
+          console.error(`Error reading file: ${err}`);
+          return;
+        }
+
+        // Create a Blob from the file data
+        const screenshotBlob = new Blob([data], { type: "image/png" });
+
+        // Show notification using Electron's Notification API
+        const notification = new Notification({
+          title: "Screenshot Taken",
+          body: "Screenshot has been captured successfully",
+        });
+        notification.show();
+        // Now you can use screenshotBlob as needed
+        console.log("Screenshot Blob:", screenshotBlob);
+      });
+    }
+  );
+
+  // Handle errors during the execution of the command
+  screenshotProcess.on("error", (err) => {
+    console.error(`Failed to execute screenshot command: ${err}`);
+  });
+
+  // Handle the process exit event
+  screenshotProcess.on("exit", (code) => {
+    if (code !== 0) {
+      console.error(`Screenshot command exited with code ${code}`);
+    } else {
+      console.log("Screenshot taken successfully");
+      // Open the external URL after taking the screenshot
+    }
+  });
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -185,8 +240,8 @@ function startMouseMovementDetection() {
           movementTimestamps.shift();
         }
       }
-      console.log(idleTime, "idletime");
-      console.log(movementTimestamps, "mouse");
+      // console.log(idleTime, "idletime");
+      // console.log(movementTimestamps, "mouse");
     }
   });
 
@@ -229,8 +284,8 @@ function startKeyboardMovementDetection() {
           movementTimestamps.shift();
         }
       }
-      console.log(idleTime, "idletime");
-      console.log(movementTimestamps, "keyboard");
+      // console.log(idleTime, "idletime");
+      // console.log(movementTimestamps, "keyboard");
     }
   });
 
@@ -316,3 +371,10 @@ function getInputDevicePath() {
   const eventNumber = executeCommand(COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER);
   return `/dev/input/event${eventNumber}`;
 }
+
+function generateUniqueFilename() {
+  const timestamp = Date.now();
+  return `screenshot_${timestamp}.png`;
+}
+
+const screenshotFilename = generateUniqueFilename();
