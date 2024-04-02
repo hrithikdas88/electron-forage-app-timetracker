@@ -7,7 +7,7 @@ contextBridge.exposeInMainWorld("myAPI", {
 });
 contextBridge.exposeInMainWorld("ipcRenderer", ipcRenderer);
 
-contextBridge.exposeInMainWorld("openExternalLink", () => {
+contextBridge.exposeInMainWorld("takess", () => {
   ipcRenderer.send("ping");
 });
 let indexBridge = {

@@ -107,8 +107,9 @@ ipcMain.on("content-to-renderer", (event, content) => {
 // });
 
 ipcMain.on("ping", () => {
+  const randomNumber = Math.floor(Math.random() * 1000);
   const screenshotProcess = exec(
-    "/usr/bin/gnome-screenshot -d 2 -f screenshotoll.png",
+    `/usr/bin/gnome-screenshot -d 2 -f screenshot${randomNumber}.png`,
     (error, stdout, stderr) => {
       if (error) {
         console.error(`Error: ${error.message}`);
@@ -118,27 +119,15 @@ ipcMain.on("ping", () => {
         console.error(`stderr: ${stderr}`);
         return;
       }
-      console.log(`stdout: ${stdout}`);
-
-      // Read the screenshot.png file and convert it into a Blob
-      fs.readFile("screenshotoll.png", (err, data) => {
-        if (err) {
-          console.error(`Error reading file: ${err}`);
-          return;
-        }
-
-        // Create a Blob from the file data
-        const screenshotBlob = new Blob([data], { type: "image/png" });
-
-        // Show notification using Electron's Notification API
-        const notification = new Notification({
-          title: "Screenshot Taken",
-          body: "Screenshot has been captured successfully",
-        });
-        notification.show();
-        // Now you can use screenshotBlob as needed
-        console.log("Screenshot Blob:", screenshotBlob);
+      // console.log(`stdout: ${stdout}`);
+      // Show notification using Electron's Notification API
+      const notification = new Notification({
+        title: "Screenshot Taken",
+        body: "Screenshot has been captured successfully",
+        // expiration: 5000
       });
+      notification.show();
+
     }
   );
 
@@ -208,7 +197,7 @@ function calculateActivityPercentage(arr, val) {
   if (arrLength === 0) {
     idleTime++;
     console.log("no activity");
-    console.log(`You are idle for ${idleTime * 2}  minits`);
+    console.log(`You are idle for ${idleTime}  minits`);
   } else {
     const percentage = (arrLength / val) * 100;
     idleTime = 0;
@@ -304,9 +293,9 @@ function startKeyboardMovementDetection() {
 }
 
 setInterval(() => {
-  calculateActivityPercentage(movementTimestamps, 120);
+  calculateActivityPercentage(movementTimestamps, 60);
   movementTimestamps = [];
-}, 120000);
+}, 60000);
 
 //check idle time
 
@@ -372,9 +361,9 @@ function getInputDevicePath() {
   return `/dev/input/event${eventNumber}`;
 }
 
-function generateUniqueFilename() {
-  const timestamp = Date.now();
-  return `screenshot_${timestamp}.png`;
-}
+// function generateUniqueFilename() {
+//   const timestamp = Date.now();
+//   return `screenshot_${timestamp}.png`;
+// }
 
-const screenshotFilename = generateUniqueFilename();
+// const screenshotFilename = generateUniqueFilename();

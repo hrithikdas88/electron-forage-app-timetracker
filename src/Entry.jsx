@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from "react";
 import ProjectList from "./Components/ProjectList/ProjectList.jsx";
+import Stopwatch from "./Components/Timer/Timer.jsx";
 
 const Entry = () => {
   const [data, setData] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
   const [timers, setTimers] = useState({});
   const [idletime, setIdletime] = useState();
-console.log(window)
+  console.log(window);
   // useEffect(() => {
   //   console.log("useeffect has been trggered");
   //   window.indexBridge.addedtime((event, data) => {
@@ -20,7 +21,7 @@ console.log(window)
   //   }
   // })
 
-  console.log(idletime)
+  console.log(idletime);
 
   useEffect(() => {
     window.indexBridge.authSucess((event, receivedData) => {
@@ -43,7 +44,7 @@ console.log(window)
     });
   };
 
-  const ipcHandle = () => window.openExternalLink();
+  const ipcHandle = () => window.takess();
   // window.ipcRenderer.on("user-continued", (event, data) => {
   //   console.log("User continued:", data.idleSeconds);
   //   // Do something with the idleSeconds data in your renderer process
@@ -51,16 +52,17 @@ console.log(window)
 
   return (
     <div>
-      <button onClick={ipcHandle}>click me</button>
-      {!data ? `login to see your projects` : <ProjectList />}
+      {/* <button onClick={ipcHandle}>take screenshot linux</button> */}
+      {/* {!data ? `login to see your projects` : <ProjectList />} */}
       <p>
         {idletime?.idleseconds}
         Then: Launch the app from a web link!
         <a href="electron://open">Click here to launch the app</a>
       </p>
+      <Stopwatch ipcHandle={ipcHandle} />
 
       {/* {idletime && idletime} */}
-      <button onClick={ss}>Click ss</button>
+      <button onClick={ss}>Click screenshot windows</button>
     </div>
   );
 };
