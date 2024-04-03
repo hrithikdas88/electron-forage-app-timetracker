@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from "react";
+import "./Timer.css";
 
 function Stopwatch({ ipcHandle }) {
   const initialProjects = [
-    { id: 1, name: "Project 1", time: 0, isRunning: false },
-    { id: 2, name: "Project 2", time: 0, isRunning: false },
-    // Add more projects here if needed
+    { id: 1, name: "Project 1", time: 0, isRunning: false, tasks: [] },
+    { id: 2, name: "Project 2", time: 0, isRunning: false, tasks: [] },
   ];
 
   const [projects, setProjects] = useState(initialProjects);
   const [TimerIndicator, setTimerIndicator] = useState(false);
+  console.log(TimerIndicator, "timerindicator");
 
   useEffect(() => {
     const timers = projects.map((project) => {
@@ -45,6 +46,7 @@ function Stopwatch({ ipcHandle }) {
   };
 
   const stopStopwatch = (projectId) => {
+    setTimerIndicator(false);
     setProjects((projects) =>
       projects.map((project) =>
         project.id === projectId ? { ...project, isRunning: false } : project
@@ -53,11 +55,20 @@ function Stopwatch({ ipcHandle }) {
   };
 
   useEffect(() => {
+    let intervalId;
+
     if (TimerIndicator) {
-      setInterval(() => {
+      console.log("Screenshot will be taken");
+      intervalId = setInterval(() => {
         ipcHandle();
       }, 30000);
+    } else {
+      console.log("Screenshot will not be taken");
     }
+
+    return () => {
+      clearInterval(intervalId);
+    };
   }, [TimerIndicator]);
 
   //   const resetStopwatch = (projectId) => {
@@ -81,16 +92,16 @@ function Stopwatch({ ipcHandle }) {
   );
 
   return (
-    <div>
-      <h1>Project Stopwatches</h1>
-      <div>
+    <div className="container">
+      <h1>TeamTracer</h1>
+      <div className="project-list">
         {projects.map((project) => (
-          <div key={project.id}>
-            <h2>{project.name}</h2>
-            <div>
+          <div key={project.id} className="project">
+            <h2 className="project-name">{project.name}</h2>
+            <div className="project-time">
               <span>{formatTime(project.time)}</span>
             </div>
-            <div>
+            <div className="project-controls">
               <button onClick={() => startStopwatch(project.id)}>Start</button>
               <button onClick={() => stopStopwatch(project.id)}>Stop</button>
               {/* <button onClick={() => resetStopwatch(project.id)}>Reset</button> */}
@@ -98,7 +109,7 @@ function Stopwatch({ ipcHandle }) {
           </div>
         ))}
       </div>
-      <div>
+      <div className="total-time">
         <h2>Total Time for All Projects</h2>
         <span>{formatTime(totalProjectTime)}</span>
       </div>

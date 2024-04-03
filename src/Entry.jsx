@@ -54,11 +54,11 @@ const Entry = () => {
     <div>
       {/* <button onClick={ipcHandle}>take screenshot linux</button> */}
       {/* {!data ? `login to see your projects` : <ProjectList />} */}
-      <p>
+      {/* <p>
         {idletime?.idleseconds}
         Then: Launch the app from a web link!
         <a href="electron://open">Click here to launch the app</a>
-      </p>
+      </p> */}
       <Stopwatch ipcHandle={ipcHandle} />
 
       {/* {idletime && idletime} */}
