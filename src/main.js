@@ -91,8 +91,11 @@ const createWindow = () => {
   mainWindow.webContents.openDevTools();
 
   //linux logic
-  startMouseMovementDetection();
-  startKeyboardMovementDetection();
+
+  if (process.platform === "linux") {
+    startMouseMovementDetection();
+    startKeyboardMovementDetection();
+  }
 };
 
 // app.on('ready', createWindow);
@@ -127,7 +130,6 @@ ipcMain.on("ping", () => {
         // expiration: 5000
       });
       notification.show();
-
     }
   );
 
@@ -206,6 +208,31 @@ function calculateActivityPercentage(arr, val) {
 }
 
 //linux mouse and keyboard detection
+
+if (process.platform === "darwin") {
+  function startMouseMovementDetection() {
+    console.log("Starting mouse movement detection...");
+
+    const detectionProcess = spawn("./mouse_movement_detection");
+
+    detectionProcess.stdout.on("data", (data) => {
+      console.log(data.toString());
+    });
+
+    detectionProcess.stderr.on("data", (data) => {
+      console.error(`Error: ${data}`);
+    });
+
+    detectionProcess.on("close", (code) => {
+      console.log(`Mouse movement detection process exited with code ${code}`);
+    });
+
+    process.on("SIGINT", () => {
+      detectionProcess.kill();
+      process.exit(0);
+    });
+  }
+}
 
 function startMouseMovementDetection() {
   console.log("Mouse movement detection started.");
@@ -296,47 +323,6 @@ setInterval(() => {
   calculateActivityPercentage(movementTimestamps, 60);
   movementTimestamps = [];
 }, 60000);
-
-//check idle time
-
-// let idleWindow;
-// const IDLE_TIME_THRESHOLD = 10000;
-// let isidlewindowPresent;
-// isidlewindowPresent = false;
-// intervalId = setInterval(() => {
-//   const currentTime = Date.now();
-//   const idletime = currentTime - lastMovementTimestamp;
-//   // console.log(idletime, "idle");
-//   // if (idletime >= IDLE_TIME_THRESHOLD) {
-//   //   if (!isidlewindowPresent) {
-//   //     isidlewindowPresent = true;
-//   //     console.log("if");
-//   //     idleWindow = new BrowserWindow({
-//   //       width: 400,
-//   //       height: 600,
-//   //       webPreferences: {
-//   //         preload: IDLE_WINDOW_PRELOAD_WEBPACK_ENTRY,
-//   //       },
-//   //     });
-//   //     idleWindow.loadURL(IDLE_WINDOW_WEBPACK_ENTRY);
-//   //     idleWindow.webContents.send("idletime", {
-//   //       idletime,
-//   //     });
-//   //     idleWindow.on("closed", () => {
-//   //       isidlewindowPresent = false;
-//   //     });
-//   //   } else {
-//   //     console.log("else");
-//   //     idleWindow.webContents.send("idletime", {
-//   //       idletime,
-//   //     });
-//   //   }
-//   // }
-// }, 10000);
-
-// function clearIdleInterval() {
-//   clearInterval(intervalId);
-// }
 
 const COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER =
   "grep -E 'Handlers|EV=' /proc/bus/input/devices |" +
