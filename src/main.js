@@ -92,9 +92,13 @@ const createWindow = () => {
 
   //linux logic
 
+  console.log(process.platform)
+
   if (process.platform === "linux") {
     startMouseMovementDetection();
     startKeyboardMovementDetection();
+  } else if (process.platform === "darwin"){
+    startMouseMovementDetectionMac()
   }
 };
 
@@ -209,29 +213,36 @@ function calculateActivityPercentage(arr, val) {
 
 //linux mouse and keyboard detection
 
-if (process.platform === "darwin") {
-  function startMouseMovementDetection() {
-    console.log("Starting mouse movement detection...");
 
-    const detectionProcess = spawn("./mouse_movement_detection");
 
-    detectionProcess.stdout.on("data", (data) => {
+function startMouseMovementDetectionMac() {
+  console.log("Starting mouse movement detection...");
+
+  // Spawn the compiled Objective-C binary
+  const detectionProcess = spawn('./mouse_movement_detection');
+  
+
+  // Listen for stdout data from the child process
+  detectionProcess.stdout.on('data', (data) => {
       console.log(data.toString());
-    });
+  });
 
-    detectionProcess.stderr.on("data", (data) => {
-      console.error(`Error: ${data}`);
-    });
+  // Listen for stderr data from the child process
+  detectionProcess.stderr.on('data', (data) => {
+     // console.error(`Error: ${data}`);
+      console.log("heyeyeyeye")
+  });
 
-    detectionProcess.on("close", (code) => {
+  // Listen for when the child process exits
+  detectionProcess.on('close', (code) => {
       console.log(`Mouse movement detection process exited with code ${code}`);
-    });
+  });
 
-    process.on("SIGINT", () => {
+  // Handle cleanup
+  process.on('SIGINT', () => {
       detectionProcess.kill();
       process.exit(0);
-    });
-  }
+  });
 }
 
 function startMouseMovementDetection() {
