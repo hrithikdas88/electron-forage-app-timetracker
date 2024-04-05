@@ -232,10 +232,14 @@ function calculateActivityPercentage(arr, val) {
     idleTime++;
     console.log("no activity");
     console.log(`You are idle for ${idleTime}  minits`);
+    mainWindow.webContents.send("idletime", idleTime)
+    dialog.showErrorBox("lol", "you are idle")
   } else {
     const percentage = (arrLength / val) * 100;
     idleTime = 0;
+    console.log(idleTime)
     console.log("Activity percentage:", percentage);
+    mainWindow.webContents.send("idletime", percentage)
   }
 }
 function startMouseMovementDetectionwin() {

@@ -5,6 +5,17 @@ const Entry = () => {
   const [data, setData] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
   const [timers, setTimers] = useState({});
+  const [idletime, setIdletiming] = useState(0)
+
+
+  // useEffect(()=>{
+    window.idletime.idletimer((event, data) => {
+      console.log(data, "idletime")
+      setIdletiming(data)
+    })
+  // },[window.idletime])
+
+ 
 
   useEffect(() => {
     window.indexBridge.authSucess((event, receivedData) => {
@@ -38,6 +49,7 @@ const Entry = () => {
         <a href="electron://open">Click here to launch the app dsdsadsa</a>
       </p>
       <button onClick={ss}>Click ss</button>
+      <p>{idletime > 0 && `You have been idle for ${idletime} minites`}</p>
     </div>
   );
 };

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld("myAPI", {
   sendContentToRenderer: (content) => {
     ipcRenderer.send("content-to-renderer", content);
   },
+
 });
 contextBridge.exposeInMainWorld("ipcRenderer", ipcRenderer);
 
@@ -12,7 +13,13 @@ contextBridge.exposeInMainWorld("openExternalLink", () => {
 });
 let indexBridge = {
   authSucess: (callback) => ipcRenderer.on("content-to-renderer", callback),
+ 
 };
+
+let idletime = {
+  idletimer: (callback) => ipcRenderer.on("idletime", (callback))
+}
+contextBridge.exposeInMainWorld("idletime" , idletime)
 
 contextBridge.exposeInMainWorld("indexBridge", indexBridge);
 
