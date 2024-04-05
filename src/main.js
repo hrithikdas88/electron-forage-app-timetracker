@@ -90,9 +90,7 @@ const createWindow = () => {
   } else if (process.platform === "win32") {
     console.log("youareonwindows");
     startKeyboardMovementDetectionWin()
-    startMouseMovementDetectionwin()
-
-   
+    startMouseMovementDetectionwin();
   }
   mainWindow.on("closed", () => {
     powershellProcess.kill();
@@ -226,16 +224,41 @@ function getInputDevicePath() {
   return `/dev/input/event${eventNumber}`;
 }
 
-
-function startKeyboardMovementDetectionWin () {
-  const scriptPath = path.join('./Get-keyboard.ps1');
-  console.log(scriptPath)
+let movementTimestamps = [];
+let idleTime = 0;
+function calculateActivityPercentage(arr, val) {
+  const arrLength = arr.length;
+  if (arrLength === 0) {
+    idleTime++;
+    console.log("no activity");
+    console.log(`You are idle for ${idleTime}  minits`);
+  } else {
+    const percentage = (arrLength / val) * 100;
+    idleTime = 0;
+    console.log("Activity percentage:", percentage);
+  }
+}
+function startMouseMovementDetectionwin() {
+  console.log("mouse movement has started");
+  const scriptPath = path.join("./Get-MousePosition.ps1");
   const powershellProcess = spawn("powershell.exe", ["-File", scriptPath]);
   powershellProcess.stdout.on("data", (data) => {
     if (!data) {
       console.log("no data");
     } else {
-      console.log(`PowerShell Output: ${data}`);
+      // console.log(`PowerShell Output: ${data}`);
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+
+        if (movementTimestamps.length > 60) {
+          movementTimestamps.shift();
+        }
+      }
     }
   });
 
@@ -249,14 +272,31 @@ function startKeyboardMovementDetectionWin () {
   });
 }
 
-function startMouseMovementDetectionwin () {
-  const scriptPath = path.join('./Get-MousePosition.ps1')
-  const powershellProcess = spawn("powershell.exe" , ["-File", scriptPath])
+setInterval(() => {
+  calculateActivityPercentage(movementTimestamps, 60);
+  movementTimestamps = [];
+}, 60000);
+
+function startKeyboardMovementDetectionWin() {
+  const scriptPath = path.join("./Get-keyboard.ps1");
+  console.log(scriptPath);
+  const powershellProcess = spawn("powershell.exe", ["-File", scriptPath]);
   powershellProcess.stdout.on("data", (data) => {
     if (!data) {
       console.log("no data");
     } else {
-      console.log(`PowerShell Output: ${data}`);
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+
+        if (movementTimestamps.length > 60) {
+          movementTimestamps.shift();
+        }
+      }
     }
   });
 
@@ -268,5 +308,4 @@ function startMouseMovementDetectionwin () {
     }
     console.error(`PowerShell Error: ${data}`);
   });
-
 }
