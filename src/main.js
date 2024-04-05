@@ -11,7 +11,7 @@ const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
-const { spawn } = require('child_process');
+const { spawn } = require("child_process");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -35,11 +35,10 @@ const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
   app.quit();
-  console.log("nolock")
+  console.log("nolock");
 } else {
   app.on("second-instance", (event, commandLine, workingDirectory) => {
-
-    console.log("yess")
+    console.log("yess");
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -84,38 +83,21 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
-  console.log(process.platform)
-  if (process.platform === "linux"){
+  console.log(process.platform);
+  if (process.platform === "linux") {
     startMouseMovementDetection();
     startKeyboardMovementDetection();
-  } else if (process.platform === "win32"){
-    console.log("youareonwindows")
- 
-  const scriptPath = path.join(app.getPath('desktop'), 'Get-MousePosition.ps1');
-  const powershellProcess = spawn('powershell.exe', ['-File', scriptPath]);
-  powershellProcess.stdout.on('data', (data) => {
-    if(!data){
-      console.log("no data")
-   } else {
-    console.log(`PowerShell Output: ${data}`);
-   }
-  });
+  } else if (process.platform === "win32") {
+    console.log("youareonwindows");
+    startKeyboardMovementDetectionWin()
+    startMouseMovementDetectionwin()
 
-  powershellProcess.stderr.on('data', (data) => {
-    if(!data){
-        console.log("no data")
-     } else {
-      console.log(`PowerShell Output: ${data}`);
-     }
-    console.error(`PowerShell Error: ${data}`);
-  });
-
+   
   }
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     powershellProcess.kill();
     mainWindow = null;
   });
- 
 };
 
 // app.on('ready', createWindow);
@@ -242,4 +224,49 @@ function executeCommand(cmd) {
 function getInputDevicePath() {
   const eventNumber = executeCommand(COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER);
   return `/dev/input/event${eventNumber}`;
+}
+
+
+function startKeyboardMovementDetectionWin () {
+  const scriptPath = path.join('./Get-keyboard.ps1');
+  console.log(scriptPath)
+  const powershellProcess = spawn("powershell.exe", ["-File", scriptPath]);
+  powershellProcess.stdout.on("data", (data) => {
+    if (!data) {
+      console.log("no data");
+    } else {
+      console.log(`PowerShell Output: ${data}`);
+    }
+  });
+
+  powershellProcess.stderr.on("data", (data) => {
+    if (!data) {
+      console.log("no data");
+    } else {
+      console.log(`PowerShell Output: ${data}`);
+    }
+    console.error(`PowerShell Error: ${data}`);
+  });
+}
+
+function startMouseMovementDetectionwin () {
+  const scriptPath = path.join('./Get-MousePosition.ps1')
+  const powershellProcess = spawn("powershell.exe" , ["-File", scriptPath])
+  powershellProcess.stdout.on("data", (data) => {
+    if (!data) {
+      console.log("no data");
+    } else {
+      console.log(`PowerShell Output: ${data}`);
+    }
+  });
+
+  powershellProcess.stderr.on("data", (data) => {
+    if (!data) {
+      console.log("no data");
+    } else {
+      console.log(`PowerShell Output: ${data}`);
+    }
+    console.error(`PowerShell Error: ${data}`);
+  });
+
 }

@@ -1,20 +1,30 @@
-# Define a function to check if a key is pressed
-function IsKeyPressed($key) {
-    $keyCode = [Windows.Input.KeyInterop]::VirtualKeyFromKey($key)
-    $keyState = [Windows.Input.Keyboard]::GetCurrentState($keyCode)
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
 
-    return $keyState -eq 'Down'
+public class KeyboardListener {
+    [DllImport("user32.dll")]
+    public static extern short GetAsyncKeyState(int vKey);
+}
+"@
+
+function Get-IsKeyPress {
+    for ($keyCode = 1; $keyCode -le 255; $keyCode++) {
+        $keyState = [KeyboardListener]::GetAsyncKeyState($keyCode)
+        if ($keyState -eq -32767 -or $keyState -eq -32768) {
+            return $true
+        }
+    }
+    return $false
 }
 
 while ($true) {
-    # Check if any key is pressed
-    if ([Console]::KeyAvailable) {
-        Write-Output "A key is pressed."
-        [Console]::ReadKey() | Out-Null  # Consume the key to avoid duplicate prints
+    $isKeyPress = Get-IsKeyPress
+
+    if ($isKeyPress) {
+        Write-Output "Key is pressed."
     }
 
     Start-Sleep -Milliseconds 100
 }
-
-
 
