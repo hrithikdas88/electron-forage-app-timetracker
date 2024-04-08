@@ -89,11 +89,10 @@ const createWindow = () => {
     startKeyboardMovementDetection();
   } else if (process.platform === "win32") {
     console.log("youareonwindows");
-    startKeyboardMovementDetectionWin()
+    startKeyboardMovementDetectionWin();
     startMouseMovementDetectionwin();
   }
   mainWindow.on("closed", () => {
-    powershellProcess.kill();
     mainWindow = null;
   });
 };
@@ -232,84 +231,91 @@ function calculateActivityPercentage(arr, val) {
     idleTime++;
     console.log("no activity");
     console.log(`You are idle for ${idleTime}  minits`);
-    mainWindow.webContents.send("idletime", idleTime)
-    dialog.showErrorBox("lol", "you are idle")
+    mainWindow.webContents.send("idletime", idleTime);
+    dialog.showErrorBox("lol", "you are idle");
   } else {
     const percentage = (arrLength / val) * 100;
     idleTime = 0;
-    console.log(idleTime)
+    console.log(idleTime);
     console.log("Activity percentage:", percentage);
-    mainWindow.webContents.send("idletime", percentage)
+    mainWindow.webContents.send("idletime", percentage);
   }
 }
 function startMouseMovementDetectionwin() {
-  console.log("mouse movement has started");
-  const scriptPath = path.join("./Get-MousePosition.ps1");
-  const powershellProcess = spawn("powershell.exe", ["-File", scriptPath]);
-  powershellProcess.stdout.on("data", (data) => {
-    if (!data) {
-      console.log("no data");
-    } else {
-      // console.log(`PowerShell Output: ${data}`);
+  const pythonScriptPath = path.join("./resources/MouseTracker.exe");
+
+  if (!fs.existsSync(pythonScriptPath)) {
+    dialog.showErrorBox("Error", "MouseTracker.exe file not found.");
+    return;
+  }
+
+  const pythonProcess = exec(pythonScriptPath);
+
+  pythonProcess.stdout.on("data", (data) => {
+    if (data) {
       const timestamp = new Date();
       const min = timestamp.getMinutes();
       const sec = timestamp.getSeconds();
       const newTimestamp = min + ":" + sec;
-
       if (!movementTimestamps.includes(newTimestamp)) {
         movementTimestamps.push(newTimestamp);
-
-        if (movementTimestamps.length > 60) {
-          movementTimestamps.shift();
-        }
+        console.log(newTimestamp);
+      }
+      if (movementTimestamps.length > 60) {
+        movementTimestamps.shift();
       }
     }
   });
 
-  powershellProcess.stderr.on("data", (data) => {
-    if (!data) {
-      console.log("no data");
-    } else {
-      console.log(`PowerShell Output: ${data}`);
-    }
-    console.error(`PowerShell Error: ${data}`);
+  pythonProcess.stderr.on("data", (data) => {
+    console.error(`stderr: ${data}`);
+  });
+
+  pythonProcess.on("close", (code) => {
+    console.log(`child process exited with code ${code}`);
   });
 }
+
+
+function startKeyboardMovementDetectionWin() {
+  const pythonScriptPath = path.join("./resources/keyboardtracker.exe");
+
+  if (!fs.existsSync(pythonScriptPath)) {
+    dialog.showErrorBox("Error", "keyboardtracker.exe file not found.");
+    return;
+  }
+
+  const pythonProcess = exec(pythonScriptPath);
+
+  pythonProcess.stdout.on("data", (data) => {
+    if (data) {
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+        console.log(newTimestamp);
+      }
+      if (movementTimestamps.length > 60) {
+        movementTimestamps.shift();
+      }
+    }
+  });
+
+  pythonProcess.stderr.on("data", (data) => {
+    console.error(`stderr: ${data}`);
+  });
+
+  pythonProcess.on("close", (code) => {
+    console.log(`child process exited with code ${code}`);
+  });
+}
+
 
 setInterval(() => {
   calculateActivityPercentage(movementTimestamps, 60);
   movementTimestamps = [];
 }, 60000);
 
-function startKeyboardMovementDetectionWin() {
-  const scriptPath = path.join("./Get-keyboard.ps1");
-  console.log(scriptPath);
-  const powershellProcess = spawn("powershell.exe", ["-File", scriptPath]);
-  powershellProcess.stdout.on("data", (data) => {
-    if (!data) {
-      console.log("no data");
-    } else {
-      const timestamp = new Date();
-      const min = timestamp.getMinutes();
-      const sec = timestamp.getSeconds();
-      const newTimestamp = min + ":" + sec;
 
-      if (!movementTimestamps.includes(newTimestamp)) {
-        movementTimestamps.push(newTimestamp);
-
-        if (movementTimestamps.length > 60) {
-          movementTimestamps.shift();
-        }
-      }
-    }
-  });
-
-  powershellProcess.stderr.on("data", (data) => {
-    if (!data) {
-      console.log("no data");
-    } else {
-      console.log(`PowerShell Output: ${data}`);
-    }
-    console.error(`PowerShell Error: ${data}`);
-  });
-}
