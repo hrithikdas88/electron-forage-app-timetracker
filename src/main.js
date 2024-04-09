@@ -6,12 +6,18 @@ const {
   dialog,
   desktopCapturer,
   screen,
+  Notification,
 } = require("electron");
 const { exec } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
 const { spawn } = require("child_process");
+const isPackaged = require('electron').app.isPackaged;
+const cron = require('node-cron');
+
+
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -126,6 +132,13 @@ ipcMain.on("capture-screenshot", async (event) => {
   const screenShotInfo = await captureScreen();
 
   const dataURL = screenShotInfo.toDataURL();
+  if (dataURL){
+    const notification = new Notification({
+      title: "Screenshot Taken",
+      body: "Screenshot has been captured successfully",
+    });
+    notification.show();
+  }
   event.sender.send("screenshot-captured", dataURL);
 });
 
@@ -238,16 +251,17 @@ function calculateActivityPercentage(arr, val) {
     idleTime = 0;
     console.log(idleTime);
     console.log("Activity percentage:", percentage);
-    mainWindow.webContents.send("idletime", percentage);
+    // mainWindow.webContents.send("idletime", percentage);
   }
 }
 function startMouseMovementDetectionwin() {
-  const pythonScriptPath = path.join("./resources/MouseTracker.exe");
 
-  if (!fs.existsSync(pythonScriptPath)) {
-    dialog.showErrorBox("Error", "MouseTracker.exe file not found.");
-    return;
-  }
+  const pythonScriptPath = isPackaged ? path.join("./resources/MouseTracker.exe") : path.join("./MouseTracker.exe")
+
+  // if (!fs.existsSync(pythonScriptPath)) {
+  //   dialog.showErrorBox("Error", "MouseTracker.exe file not found.");
+  //   return;
+  // }
 
   const pythonProcess = exec(pythonScriptPath);
 
@@ -278,12 +292,12 @@ function startMouseMovementDetectionwin() {
 
 
 function startKeyboardMovementDetectionWin() {
-  const pythonScriptPath = path.join("./resources/keyboardtracker.exe");
+  const pythonScriptPath = isPackaged ? path.join("./resources/keyboardtracker.exe") : path.join("./keyboardtracker.exe")
 
-  if (!fs.existsSync(pythonScriptPath)) {
-    dialog.showErrorBox("Error", "keyboardtracker.exe file not found.");
-    return;
-  }
+  // if (!fs.existsSync(pythonScriptPath)) {
+  //   dialog.showErrorBox("Error", "keyboardtracker.exe file not found.");
+  //   return;
+  // }
 
   const pythonProcess = exec(pythonScriptPath);
 
@@ -313,9 +327,9 @@ function startKeyboardMovementDetectionWin() {
 }
 
 
-setInterval(() => {
+cron.schedule('*/1 * * * *', () => {
   calculateActivityPercentage(movementTimestamps, 60);
   movementTimestamps = [];
-}, 60000);
+});
 
 

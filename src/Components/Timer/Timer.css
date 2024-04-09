@@ -1,0 +1,41 @@
+.container {
+    margin: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.project-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.project {
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.project-name {
+    margin-top: 0;
+}
+
+.project-time {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.project-controls button {
+    margin-right: 5px;
+    padding: 5px 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.project-controls button:hover {
+    background-color: #0056b3;
+}
+
+.total-time {
+    margin-top: 20px;
+}

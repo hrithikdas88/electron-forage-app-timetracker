@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import ProjectList from "./Components/ProjectList/ProjectList.jsx";
+import Stopwatch from "./Components/Timer/Timer.jsx";
 
 const Entry = () => {
   const [data, setData] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
   const [timers, setTimers] = useState({});
   const [idletime, setIdletiming] = useState(0)
+  const [img, setImg] = useState("")
 
 
   // useEffect(()=>{
@@ -33,24 +35,28 @@ const Entry = () => {
     await window.screenshot.captureScreenShot();
     window.screenshot.screenShotCaptured((event, dataURL) => {
       console.log(dataURL);
-      // setImg(dataURL);
+      setImg(dataURL);
       // setUrlReached(true);
     });
   };
 
-  const ipcHandle = () => window.openExternalLink();
+  
 
   return (
-    <div>
-      <button onClick={ipcHandle}>click me</button>
-      {!data ? `login to see your projects` : <ProjectList />}
-      <p>
-        Then: Launch the app from a web link!
-        <a href="electron://open">Click here to launch the app dsdsadsa</a>
-      </p>
-      <button onClick={ss}>Click ss</button>
-      <p>{idletime > 0 && `You have been idle for ${idletime} minites`}</p>
-    </div>
+    <>
+    <Stopwatch ipcHandle={ss}/>
+    {/* <img src={img} alt="no image" /> */}
+    </>
+    // <div>
+    //   <button onClick={ipcHandle}>click me</button>
+    //   {!data ? `login to see your projects` : <ProjectList />}
+    //   <p>
+    //     Then: Launch the app from a web link!
+    //     <a href="electron://open">Click here to launch the app dsdsadsa</a>
+    //   </p>
+    //   <button onClick={ss}>Click ss</button>
+    //   <p>{idletime > 0 && `You have been idle for ${idletime} minites`}</p>
+    // </div>
   );
 };
 
