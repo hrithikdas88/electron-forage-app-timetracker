@@ -13,11 +13,8 @@ const path = require("path");
 const fs = require("fs");
 const { execSync } = require("child_process");
 const { spawn } = require("child_process");
-const isPackaged = require('electron').app.isPackaged;
-const cron = require('node-cron');
-
-
-
+const isPackaged = require("electron").app.isPackaged;
+const cron = require("node-cron");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -110,8 +107,6 @@ ipcMain.on("content-to-renderer", (event, content) => {
   console.log("Content received in main process:", content);
 });
 
-ipcMain.on("ping", () => shell.openExternal("http://localhost:3002/"));
-
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
@@ -128,11 +123,13 @@ app.on("activate", () => {
 
 //ss-logic
 
+
 ipcMain.on("capture-screenshot", async (event) => {
   const screenShotInfo = await captureScreen();
 
   const dataURL = screenShotInfo.toDataURL();
-  if (dataURL){
+
+  if (dataURL) {
     const notification = new Notification({
       title: "Screenshot Taken",
       body: "Screenshot has been captured successfully",
@@ -143,13 +140,23 @@ ipcMain.on("capture-screenshot", async (event) => {
 });
 
 async function captureScreen() {
-  const primaryDisplay = screen.getPrimaryDisplay();
+  const displays = screen.getAllDisplays();
+  const primaryDisplay = displays.find(
+    (display) => display.id === screen.getPrimaryDisplay().id
+  );
+
+  const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
+  const thumbnailWidth = 100; // Set your desired thumbnail width
+  const thumbnailHeight = thumbnailWidth / aspectRatio;
+
   const options = {
     types: ["screen"],
     thumbnailSize: {
-      width: primaryDisplay.size.width,
-      height: primaryDisplay.size.height,
+      // Set to a high static value
+      width: 1920,
+      height: 1080,
     },
+    fetchWindowIcons: false,
     screen: {
       id: primaryDisplay.id,
     },
@@ -255,8 +262,10 @@ function calculateActivityPercentage(arr, val) {
   }
 }
 function startMouseMovementDetectionwin() {
-
-  const pythonScriptPath = isPackaged ? path.join("./resources/MouseTracker.exe") : path.join("./MouseTracker.exe")
+  console.log(isPackaged)
+  const pythonScriptPath = isPackaged
+    ? path.join("./resources/MouseTracker.exe")
+    : path.join("./MouseTracker.exe");
 
   // if (!fs.existsSync(pythonScriptPath)) {
   //   dialog.showErrorBox("Error", "MouseTracker.exe file not found.");
@@ -273,9 +282,10 @@ function startMouseMovementDetectionwin() {
       const newTimestamp = min + ":" + sec;
       if (!movementTimestamps.includes(newTimestamp)) {
         movementTimestamps.push(newTimestamp);
-        console.log(newTimestamp);
+        // console.log(newTimestamp);
+        console.log(movementTimestamps, "arr")
       }
-      if (movementTimestamps.length > 60) {
+      if (movementTimestamps.length > 600) {
         movementTimestamps.shift();
       }
     }
@@ -290,9 +300,10 @@ function startMouseMovementDetectionwin() {
   });
 }
 
-
 function startKeyboardMovementDetectionWin() {
-  const pythonScriptPath = isPackaged ? path.join("./resources/keyboardtracker.exe") : path.join("./keyboardtracker.exe")
+  const pythonScriptPath = isPackaged
+    ? path.join("./resources/keyboardtracker.exe")
+    : path.join("./keyboardtracker.exe");
 
   // if (!fs.existsSync(pythonScriptPath)) {
   //   dialog.showErrorBox("Error", "keyboardtracker.exe file not found.");
@@ -310,8 +321,9 @@ function startKeyboardMovementDetectionWin() {
       if (!movementTimestamps.includes(newTimestamp)) {
         movementTimestamps.push(newTimestamp);
         console.log(newTimestamp);
+        console.log(movementTimestamps, "arra")
       }
-      if (movementTimestamps.length > 60) {
+      if (movementTimestamps.length > 600) {
         movementTimestamps.shift();
       }
     }
@@ -326,10 +338,20 @@ function startKeyboardMovementDetectionWin() {
   });
 }
 
-
-cron.schedule('*/1 * * * *', () => {
-  calculateActivityPercentage(movementTimestamps, 60);
-  movementTimestamps = [];
+let cronJob;
+console.log(movementTimestamps,"arra")
+ipcMain.on("ping", () => {
+  console.log("ping");
+  cronJob = cron.schedule('*/10 * * * *', () => {
+    calculateActivityPercentage(movementTimestamps, 600);
+    movementTimestamps = [];
+  });
 });
-
-
+ipcMain.on("stopPing", () => {
+  if (cronJob) {
+    cronJob.stop();
+    console.log("Cron job stopped");
+  } else {
+    console.log("No cron job to stop");
+  }
+});

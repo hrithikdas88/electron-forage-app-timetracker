@@ -6,18 +6,15 @@ const Entry = () => {
   const [data, setData] = useState("");
   const [currentProject, setCurrentProject] = useState(null);
   const [timers, setTimers] = useState({});
-  const [idletime, setIdletiming] = useState(0)
-  const [img, setImg] = useState("")
-
+  const [idletime, setIdletiming] = useState(0);
+  const [img, setImg] = useState("");
 
   // useEffect(()=>{
-    window.idletime.idletimer((event, data) => {
-      console.log(data, "idletime")
-      setIdletiming(data)
-    })
+  window.idletime.idletimer((event, data) => {
+    console.log(data, "idletime");
+    setIdletiming(data);
+  });
   // },[window.idletime])
-
- 
 
   useEffect(() => {
     window.indexBridge.authSucess((event, receivedData) => {
@@ -40,12 +37,16 @@ const Entry = () => {
     });
   };
 
-  
-
   return (
     <>
-    <Stopwatch ipcHandle={ss}/>
-    {/* <img src={img} alt="no image" /> */}
+      <Stopwatch
+        ipcHandle={ss}
+        startDetection={window.startdetection}
+        stopDetection={window.stopdetection}
+      />
+
+    
+      <img src={img} alt="no image" />
     </>
     // <div>
     //   <button onClick={ipcHandle}>click me</button>

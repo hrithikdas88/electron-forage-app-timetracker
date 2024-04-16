@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Timer.css";
 
-function Stopwatch({ ipcHandle }) {
+function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
   const initialProjects = [
     { id: 1, name: "Project 1", time: 0, isRunning: false, tasks: [] },
     { id: 2, name: "Project 2", time: 0, isRunning: false, tasks: [] },
@@ -41,6 +41,7 @@ function Stopwatch({ ipcHandle }) {
           : { ...project, isRunning: false }
       )
     );
+    startDetection()
     setTimerIndicator(true);
     ipcHandle();
   };
@@ -52,24 +53,25 @@ function Stopwatch({ ipcHandle }) {
         project.id === projectId ? { ...project, isRunning: false } : project
       )
     );
+    stopDetection()
   };
 
-  useEffect(() => {
-    let intervalId;
+  // useEffect(() => {
+  //   let intervalId;
 
-    if (TimerIndicator) {
-      console.log("Screenshot will be taken");
-      intervalId = setInterval(() => {
-        ipcHandle();
-      }, 30000);
-    } else {
-      console.log("Screenshot will not be taken");
-    }
+  //   if (TimerIndicator) {
+  //     console.log("Screenshot will be taken");
+  //     intervalId = setInterval(() => {
+  //       ipcHandle();
+  //     }, 30000);
+  //   } else {
+  //     console.log("Screenshot will not be taken");
+  //   }
 
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [TimerIndicator]);
+  //   return () => {
+  //     clearInterval(intervalId);
+  //   };
+  // }, [TimerIndicator]);
 
   //   const resetStopwatch = (projectId) => {
   //     setProjects(projects => projects.map(project =>
