@@ -7,12 +7,18 @@ const Entry = () => {
   const [currentProject, setCurrentProject] = useState(null);
   const [timers, setTimers] = useState({});
   const [idletime, setIdletiming] = useState(0);
+  const [activity, setactivity] = useState(0);
   const [img, setImg] = useState("");
 
   // useEffect(()=>{
   window.idletime.idletimer((event, data) => {
     console.log(data, "idletime");
     setIdletiming(data);
+  });
+
+  window.idletime.activitypersentage((event, data) => {
+    console.log(data, "activity persentage");
+    setactivity(data)
   });
   // },[window.idletime])
 
@@ -44,9 +50,10 @@ const Entry = () => {
         startDetection={window.startdetection}
         stopDetection={window.stopdetection}
       />
+      <p>{idletime > 0 && `You have been idle for ${idletime} minites`}</p>
+      <p>{activity >0 && `Your activity is ${activity} persent`}</p>
 
-    
-      <img src={img} alt="no image" />
+      {/* <img src={img} alt="no image" /> */}
     </>
     // <div>
     //   <button onClick={ipcHandle}>click me</button>
@@ -56,7 +63,7 @@ const Entry = () => {
     //     <a href="electron://open">Click here to launch the app dsdsadsa</a>
     //   </p>
     //   <button onClick={ss}>Click ss</button>
-    //   <p>{idletime > 0 && `You have been idle for ${idletime} minites`}</p>
+
     // </div>
   );
 };

@@ -19,6 +19,7 @@ let indexBridge = {
 
 let idletime = {
   idletimer: (callback) => ipcRenderer.on("idletime", callback),
+  activitypersentage: (callback) => ipcRenderer.on("activitypersent", callback),
 };
 contextBridge.exposeInMainWorld("idletime", idletime);
 

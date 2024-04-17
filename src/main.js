@@ -87,14 +87,7 @@ const createWindow = () => {
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
   console.log(process.platform);
-  if (process.platform === "linux") {
-    startMouseMovementDetection();
-    startKeyboardMovementDetection();
-  } else if (process.platform === "win32") {
-    console.log("youareonwindows");
-    startKeyboardMovementDetectionWin();
-    startMouseMovementDetectionwin();
-  }
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
@@ -145,9 +138,9 @@ async function captureScreen() {
     (display) => display.id === screen.getPrimaryDisplay().id
   );
 
-  const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
-  const thumbnailWidth = 100; // Set your desired thumbnail width
-  const thumbnailHeight = thumbnailWidth / aspectRatio;
+  // const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
+  // const thumbnailWidth = 100; // Set your desired thumbnail width
+  // const thumbnailHeight = thumbnailWidth / aspectRatio;
 
   const options = {
     types: ["screen"],
@@ -245,6 +238,7 @@ function getInputDevicePath() {
 
 let movementTimestamps = [];
 let idleTime = 0;
+let idleCalctimeinSeconds = 60
 function calculateActivityPercentage(arr, val) {
   const arrLength = arr.length;
   if (arrLength === 0) {
@@ -258,9 +252,11 @@ function calculateActivityPercentage(arr, val) {
     idleTime = 0;
     console.log(idleTime);
     console.log("Activity percentage:", percentage);
-    // mainWindow.webContents.send("idletime", percentage);
+    mainWindow.webContents.send("activitypersent", percentage);
   }
 }
+
+let mouseDetectionWin;
 function startMouseMovementDetectionwin() {
   console.log(isPackaged)
   const pythonScriptPath = isPackaged
@@ -272,10 +268,10 @@ function startMouseMovementDetectionwin() {
   //   return;
   // }
 
-  const pythonProcess = exec(pythonScriptPath);
+   mouseDetectionWin = exec(pythonScriptPath);
 
-  pythonProcess.stdout.on("data", (data) => {
-    if (data) {
+  mouseDetectionWin.stdout.on("data", (data) => {
+    if (data && mouseDetectionWin) {
       const timestamp = new Date();
       const min = timestamp.getMinutes();
       const sec = timestamp.getSeconds();
@@ -285,21 +281,23 @@ function startMouseMovementDetectionwin() {
         // console.log(newTimestamp);
         console.log(movementTimestamps, "arr")
       }
-      if (movementTimestamps.length > 600) {
+      if (movementTimestamps.length > idleCalctimeinSeconds) {
         movementTimestamps.shift();
       }
     }
   });
 
-  pythonProcess.stderr.on("data", (data) => {
+  mouseDetectionWin.stderr.on("data", (data) => {
     console.error(`stderr: ${data}`);
   });
 
-  pythonProcess.on("close", (code) => {
+  mouseDetectionWin.on("close", (code) => {
     console.log(`child process exited with code ${code}`);
   });
 }
 
+
+let keyBoardDetectionWin ;
 function startKeyboardMovementDetectionWin() {
   const pythonScriptPath = isPackaged
     ? path.join("./resources/keyboardtracker.exe")
@@ -310,10 +308,11 @@ function startKeyboardMovementDetectionWin() {
   //   return;
   // }
 
-  const pythonProcess = exec(pythonScriptPath);
+  keyBoardDetectionWin = exec(pythonScriptPath);
 
-  pythonProcess.stdout.on("data", (data) => {
-    if (data) {
+
+  keyBoardDetectionWin.stdout.on("data", (data) => {
+    if (data && keyBoardDetectionWin) {
       const timestamp = new Date();
       const min = timestamp.getMinutes();
       const sec = timestamp.getSeconds();
@@ -323,33 +322,79 @@ function startKeyboardMovementDetectionWin() {
         console.log(newTimestamp);
         console.log(movementTimestamps, "arra")
       }
-      if (movementTimestamps.length > 600) {
+      if (movementTimestamps.length > idleCalctimeinSeconds) {
         movementTimestamps.shift();
       }
     }
   });
 
-  pythonProcess.stderr.on("data", (data) => {
+  keyBoardDetectionWin.stderr.on("data", (data) => {
     console.error(`stderr: ${data}`);
   });
 
-  pythonProcess.on("close", (code) => {
+  keyBoardDetectionWin.on("close", (code) => {
     console.log(`child process exited with code ${code}`);
   });
 }
 
+
+function stopDetection() {
+  if (keyBoardDetectionWin) {
+    keyBoardDetectionWin.kill();
+    console.log("Keyboard detection process killed");
+    keyBoardDetectionWin.on('exit', (code, signal) => {
+      console.log(`Keyboard detection process exited with code ${code} and signal ${signal}`);
+    });
+    keyBoardDetectionWin = null;
+  }
+
+  if (mouseDetectionWin) {
+    mouseDetectionWin.kill();
+    console.log("Mouse detection process killed");
+    mouseDetectionWin.on('exit', (code, signal) => {
+      console.log(`Mouse detection process exited with code ${code} and signal ${signal}`);
+    });
+    mouseDetectionWin = null;
+  }
+
+  if (!keyBoardDetectionWin && !mouseDetectionWin) {
+    console.log("No keyboard or mouse detection processes running");
+  }
+}
+
+
 let cronJob;
 console.log(movementTimestamps,"arra")
 ipcMain.on("ping", () => {
+  if (process.platform === "linux") {
+    startMouseMovementDetection();
+    startKeyboardMovementDetection();
+  } else if (process.platform === "win32") {
+    console.log("youareonwindows");
+    startKeyboardMovementDetectionWin();
+    startMouseMovementDetectionwin();
+  }
   console.log("ping");
-  cronJob = cron.schedule('*/10 * * * *', () => {
-    calculateActivityPercentage(movementTimestamps, 600);
+  cronJob = cron.schedule('*/1 * * * *', async () => {
+    const screenShotInfo = await captureScreen();
+    const dataURL = screenShotInfo.toDataURL();
+    if (dataURL) {
+      const notification = new Notification({
+        title: "Screenshot Taken",
+        body: "Screenshot has been captured successfully",
+      });
+      notification.show();
+    }
+  
+    mainWindow.webContents.send("screenshot-captured", dataURL);
+    calculateActivityPercentage(movementTimestamps, idleCalctimeinSeconds); 
     movementTimestamps = [];
-  });
+});
 });
 ipcMain.on("stopPing", () => {
   if (cronJob) {
     cronJob.stop();
+    stopDetection()
     console.log("Cron job stopped");
   } else {
     console.log("No cron job to stop");

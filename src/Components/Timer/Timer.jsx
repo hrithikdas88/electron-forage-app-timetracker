@@ -9,7 +9,7 @@ function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
 
   const [projects, setProjects] = useState(initialProjects);
   const [TimerIndicator, setTimerIndicator] = useState(false);
-  console.log(TimerIndicator, "timerindicator");
+
 
   useEffect(() => {
     const timers = projects.map((project) => {
