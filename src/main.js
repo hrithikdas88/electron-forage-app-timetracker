@@ -117,6 +117,7 @@ app.on("activate", () => {
 //ss-logic
 
 
+
 ipcMain.on("capture-screenshot", async (event) => {
   const screenShotInfo = await captureScreen();
 
@@ -237,28 +238,60 @@ function getInputDevicePath() {
 }
 
 let movementTimestamps = [];
-let idleTime = 0;
-let idleCalctimeinSeconds = 60
-function calculateActivityPercentage(arr, val) {
-  const arrLength = arr.length;
-  if (arrLength === 0) {
-    idleTime++;
-    console.log("no activity");
-    console.log(`You are idle for ${idleTime}  minits`);
-    mainWindow.webContents.send("idletime", idleTime);
-    dialog.showErrorBox("lol", "you are idle");
-  } else {
-    const percentage = (arrLength / val) * 100;
-    idleTime = 0;
-    console.log(idleTime);
-    console.log("Activity percentage:", percentage);
-    mainWindow.webContents.send("activitypersent", percentage);
+let movementTimestampsforidle = [];
+let userIsIdle = false;
+let idleCalctimeinSeconds = 120;
+
+ipcMain.on("IdlerimehasbeenAdded",  (event) => {
+ userIsIdle = false
+});
+
+// function calculateidletime(arr) {
+//   if (arr.length < 2) {
+//     return;
+//   }
+//   const idleThresholdInmin = 1;
+//   const diffrence = arr[arr.length - 1] - arr[arr.length - 2];
+//   console.log(diffrence, "diffrence between time stamps");
+//   if (diffrence >= idleThresholdInmin) {
+//     console.log(`You are idle for ${diffrence} minutes`);
+//   }
+// }
+
+function calculateIdleTime(arr, currenttimestamp) {
+  const idleThresholdInMin = 1;
+  const arrElement = arr[arr.length - 1];
+
+  const differenceInMs = currenttimestamp - arrElement;
+  const differenceInMin = differenceInMs / (1000 * 60);
+  console.log(differenceInMin, "difference between timestamps in minutes");
+  if (differenceInMin >= idleThresholdInMin) {
+    userIsIdle = true;
+    console.log(`You are idle for ${differenceInMin} minutes`);
+    mainWindow.webContents.send("idletime", differenceInMin);
   }
 }
 
+function calculateActivityPercentage(arr, val) {
+  const arrLength = arr.length;
+  // if (arrLength === 0) {
+  //   // idleTime++;
+  //   // console.log("no activity");
+  //   // console.log(`You are idle for ${idleTime}  minits`);
+  //   // mainWindow.webContents.send("idletime", idleTime);
+  //   // dialog.showErrorBox("lol", "you are idle");
+  // } else {
+  const percentage = (arrLength / val) * 100;
+  // idleTime = 0;
+  // console.log(idleTime);
+  console.log("Activity percentage:", percentage);
+  mainWindow.webContents.send("activitypersent", percentage);
+}
+// }
+
 let mouseDetectionWin;
 function startMouseMovementDetectionwin() {
-  console.log(isPackaged)
+  console.log(isPackaged);
   const pythonScriptPath = isPackaged
     ? path.join("./resources/MouseTracker.exe")
     : path.join("./MouseTracker.exe");
@@ -268,18 +301,22 @@ function startMouseMovementDetectionwin() {
   //   return;
   // }
 
-   mouseDetectionWin = exec(pythonScriptPath);
+  mouseDetectionWin = exec(pythonScriptPath);
 
   mouseDetectionWin.stdout.on("data", (data) => {
-    if (data && mouseDetectionWin) {
+    if (data && mouseDetectionWin && !userIsIdle) {
       const timestamp = new Date();
       const min = timestamp.getMinutes();
+      const foridletimeChecker = timestamp.getTime();
+      movementTimestampsforidle.push(foridletimeChecker);
+      // console.log(movementTimestampsforidle, "idletimestamps");
       const sec = timestamp.getSeconds();
       const newTimestamp = min + ":" + sec;
+
       if (!movementTimestamps.includes(newTimestamp)) {
         movementTimestamps.push(newTimestamp);
         // console.log(newTimestamp);
-        console.log(movementTimestamps, "arr")
+        console.log(movementTimestamps, "arr");
       }
       if (movementTimestamps.length > idleCalctimeinSeconds) {
         movementTimestamps.shift();
@@ -296,8 +333,7 @@ function startMouseMovementDetectionwin() {
   });
 }
 
-
-let keyBoardDetectionWin ;
+let keyBoardDetectionWin;
 function startKeyboardMovementDetectionWin() {
   const pythonScriptPath = isPackaged
     ? path.join("./resources/keyboardtracker.exe")
@@ -310,17 +346,18 @@ function startKeyboardMovementDetectionWin() {
 
   keyBoardDetectionWin = exec(pythonScriptPath);
 
-
   keyBoardDetectionWin.stdout.on("data", (data) => {
-    if (data && keyBoardDetectionWin) {
+    if (data && keyBoardDetectionWin && !userIsIdle) {
       const timestamp = new Date();
       const min = timestamp.getMinutes();
+      const foridletimeChecker = timestamp.getTime();
+      movementTimestampsforidle.push(foridletimeChecker);
       const sec = timestamp.getSeconds();
       const newTimestamp = min + ":" + sec;
       if (!movementTimestamps.includes(newTimestamp)) {
         movementTimestamps.push(newTimestamp);
-        console.log(newTimestamp);
-        console.log(movementTimestamps, "arra")
+        // console.log(newTimestamp);
+        console.log(movementTimestamps, "arra");
       }
       if (movementTimestamps.length > idleCalctimeinSeconds) {
         movementTimestamps.shift();
@@ -337,13 +374,15 @@ function startKeyboardMovementDetectionWin() {
   });
 }
 
-
 function stopDetection() {
+  movementTimestamps = [];
   if (keyBoardDetectionWin) {
     keyBoardDetectionWin.kill();
     console.log("Keyboard detection process killed");
-    keyBoardDetectionWin.on('exit', (code, signal) => {
-      console.log(`Keyboard detection process exited with code ${code} and signal ${signal}`);
+    keyBoardDetectionWin.on("exit", (code, signal) => {
+      console.log(
+        `Keyboard detection process exited with code ${code} and signal ${signal}`
+      );
     });
     keyBoardDetectionWin = null;
   }
@@ -351,8 +390,10 @@ function stopDetection() {
   if (mouseDetectionWin) {
     mouseDetectionWin.kill();
     console.log("Mouse detection process killed");
-    mouseDetectionWin.on('exit', (code, signal) => {
-      console.log(`Mouse detection process exited with code ${code} and signal ${signal}`);
+    mouseDetectionWin.on("exit", (code, signal) => {
+      console.log(
+        `Mouse detection process exited with code ${code} and signal ${signal}`
+      );
     });
     mouseDetectionWin = null;
   }
@@ -362,10 +403,19 @@ function stopDetection() {
   }
 }
 
-
 let cronJob;
-console.log(movementTimestamps,"arra")
+let cronJobIdle;
+console.log(movementTimestamps, "arra");
 ipcMain.on("ping", () => {
+  const TrackerOnTeam = new Date().getTime();
+  movementTimestampsforidle.push(TrackerOnTeam);
+  cronJobIdle = cron.schedule("*/1 * * * *", () => {
+    console.log("cron has started");
+    const currenttimestamp = new Date().getTime();
+    console.log(currenttimestamp);
+    calculateIdleTime(movementTimestampsforidle, currenttimestamp);
+  });
+
   if (process.platform === "linux") {
     startMouseMovementDetection();
     startKeyboardMovementDetection();
@@ -375,26 +425,31 @@ ipcMain.on("ping", () => {
     startMouseMovementDetectionwin();
   }
   console.log("ping");
-  cronJob = cron.schedule('*/1 * * * *', async () => {
-    const screenShotInfo = await captureScreen();
-    const dataURL = screenShotInfo.toDataURL();
-    if (dataURL) {
-      const notification = new Notification({
-        title: "Screenshot Taken",
-        body: "Screenshot has been captured successfully",
-      });
-      notification.show();
+  cronJob = cron.schedule("*/2 * * * *", async () => {
+    if (process.platform === "win32") {
+      const screenShotInfo = await captureScreen();
+      const dataURL = screenShotInfo.toDataURL();
+      if (dataURL) {
+        const notification = new Notification({
+          title: "Screenshot Taken",
+          body: "Screenshot has been captured successfully",
+        });
+        notification.show();
+      }
+
+      mainWindow.webContents.send("screenshot-captured", dataURL);
     }
-  
-    mainWindow.webContents.send("screenshot-captured", dataURL);
-    calculateActivityPercentage(movementTimestamps, idleCalctimeinSeconds); 
+
+    calculateActivityPercentage(movementTimestamps, idleCalctimeinSeconds);
+
     movementTimestamps = [];
-});
+  });
 });
 ipcMain.on("stopPing", () => {
-  if (cronJob) {
+  if (cronJob && cronJobIdle) {
     cronJob.stop();
-    stopDetection()
+    cronJobIdle.stop()
+    stopDetection();
     console.log("Cron job stopped");
   } else {
     console.log("No cron job to stop");
