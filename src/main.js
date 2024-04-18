@@ -116,8 +116,6 @@ app.on("activate", () => {
 
 //ss-logic
 
-
-
 ipcMain.on("capture-screenshot", async (event) => {
   const screenShotInfo = await captureScreen();
 
@@ -242,8 +240,8 @@ let movementTimestampsforidle = [];
 let userIsIdle = false;
 let idleCalctimeinSeconds = 120;
 
-ipcMain.on("IdlerimehasbeenAdded",  (event) => {
- userIsIdle = false
+ipcMain.on("IdlerimehasbeenAdded", (event) => {
+  userIsIdle = false;
 });
 
 // function calculateidletime(arr) {
@@ -266,6 +264,8 @@ function calculateIdleTime(arr, currenttimestamp) {
   const differenceInMin = differenceInMs / (1000 * 60);
   console.log(differenceInMin, "difference between timestamps in minutes");
   if (differenceInMin >= idleThresholdInMin) {
+    mainWindow.restore();
+
     userIsIdle = true;
     console.log(`You are idle for ${differenceInMin} minutes`);
     mainWindow.webContents.send("idletime", differenceInMin);
@@ -448,7 +448,7 @@ ipcMain.on("ping", () => {
 ipcMain.on("stopPing", () => {
   if (cronJob && cronJobIdle) {
     cronJob.stop();
-    cronJobIdle.stop()
+    cronJobIdle.stop();
     stopDetection();
     console.log("Cron job stopped");
   } else {
