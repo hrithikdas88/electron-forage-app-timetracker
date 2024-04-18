@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from "react";
+// Timer.jsx
+
+import React, { useEffect, useState } from "react";
 import "./Timer.css";
 
-function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
+function Stopwatch({ idletime, modalOpen, ipcHandle, startDetection, stopDetection }) {
+  console.log(idletime, "idletime in stopwatch")
   const initialProjects = [
     { id: 1, name: "Project 1", time: 0, isRunning: false, tasks: [] },
     { id: 2, name: "Project 2", time: 0, isRunning: false, tasks: [] },
   ];
 
   const [projects, setProjects] = useState(initialProjects);
-  const [TimerIndicator, setTimerIndicator] = useState(false);
-
 
   useEffect(() => {
     const timers = projects.map((project) => {
       let timer;
-      if (project.isRunning) {
+      if (project.isRunning && !modalOpen) {
         timer = setInterval(() => {
           setProjects((projects) =>
             projects.map((p) =>
@@ -31,7 +32,7 @@ function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
     return () => {
       timers.forEach((timer) => clearInterval(timer));
     };
-  }, [projects]);
+  }, [projects, modalOpen]);
 
   const startStopwatch = (projectId) => {
     setProjects((projects) =>
@@ -42,12 +43,10 @@ function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
       )
     );
     startDetection()
-    setTimerIndicator(true);
     ipcHandle();
   };
 
   const stopStopwatch = (projectId) => {
-    setTimerIndicator(false);
     setProjects((projects) =>
       projects.map((project) =>
         project.id === projectId ? { ...project, isRunning: false } : project
@@ -55,29 +54,6 @@ function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
     );
     stopDetection()
   };
-
-  // useEffect(() => {
-  //   let intervalId;
-
-  //   if (TimerIndicator) {
-  //     console.log("Screenshot will be taken");
-  //     intervalId = setInterval(() => {
-  //       ipcHandle();
-  //     }, 30000);
-  //   } else {
-  //     console.log("Screenshot will not be taken");
-  //   }
-
-  //   return () => {
-  //     clearInterval(intervalId);
-  //   };
-  // }, [TimerIndicator]);
-
-  //   const resetStopwatch = (projectId) => {
-  //     setProjects(projects => projects.map(project =>
-  //       project.id === projectId ? { ...project, time: 0, isRunning: false } : project
-  //     ));
-  //   };
 
   const formatTime = (time) => {
     const hours = Math.floor(time / 3600);
@@ -106,7 +82,6 @@ function Stopwatch({ ipcHandle,startDetection,stopDetection }) {
             <div className="project-controls">
               <button onClick={() => startStopwatch(project.id)}>Start</button>
               <button onClick={() => stopStopwatch(project.id)}>Stop</button>
-              {/* <button onClick={() => resetStopwatch(project.id)}>Reset</button> */}
             </div>
           </div>
         ))}
