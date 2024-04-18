@@ -7,12 +7,22 @@ contextBridge.exposeInMainWorld("myAPI", {
 });
 contextBridge.exposeInMainWorld("ipcRenderer", ipcRenderer);
 
-contextBridge.exposeInMainWorld("openExternalLink", () => {
+contextBridge.exposeInMainWorld("startdetection", () => {
   ipcRenderer.send("ping");
+});
+contextBridge.exposeInMainWorld("stopdetection", () => {
+  ipcRenderer.send("stopPing");
 });
 let indexBridge = {
   authSucess: (callback) => ipcRenderer.on("content-to-renderer", callback),
 };
+
+let idletime = {
+  idletimer: (callback) => ipcRenderer.on("idletime", callback),
+  activitypersentage: (callback) => ipcRenderer.on("activitypersent", callback),
+  idleTimehasbeenadded: () => ipcRenderer.send("IdlerimehasbeenAdded")
+};
+contextBridge.exposeInMainWorld("idletime", idletime);
 
 contextBridge.exposeInMainWorld("indexBridge", indexBridge);
 
