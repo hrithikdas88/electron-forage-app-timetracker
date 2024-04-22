@@ -7,6 +7,7 @@ const {
   desktopCapturer,
   screen,
   Notification,
+  globalShortcut,
 } = require("electron");
 const { exec } = require("child_process");
 const path = require("path");
@@ -15,8 +16,38 @@ const { execSync } = require("child_process");
 const { spawn } = require("child_process");
 const isPackaged = require("electron").app.isPackaged;
 const cron = require("node-cron");
+const sudoPrompt = require('sudo-prompt');
+
+
+// function setupSudoersForInputDevices() {
+//   const sudoersD = '/etc/sudoers.d';
+//   const sudoersFile = path.join(sudoersD, '90-input-devices-nopasswd');
+//   const groupCheckCommand = "getent group inputusers || groupadd inputusers";
+//   const sudoersContent = "%inputusers ALL=(ALL) NOPASSWD: /bin/cat /dev/input/*";
+//   const fullCommand = `${groupCheckCommand} && echo '${sudoersContent}' | sudo EDITOR='tee' visudo -f ${sudoersFile}`;
+
+//   // Options for sudo-prompt
+//   const options = {
+//     name: 'Electron',
+//     icns: '/path/to/app.icns', // (optional) macOS only, path to your app icon
+//   };
+
+//   // Use sudo-prompt to execute the command
+//   sudo.exec(fullCommand, options, (error, stdout, stderr) => {
+//     if (error) {
+//       console.error(`Error: ${error}`);
+//       return;
+//     }
+//     console.log('Sudoers setup completed successfully.');
+//     console.log(stdout);
+//   });
+// }
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
+let movementTimestamps = [];
+let movementTimestampsforidle = [];
+let userIsIdle = false;
+let idleCalctimeinSeconds = 120;
 if (require("electron-squirrel-startup")) {
   app.quit();
 }
@@ -60,7 +91,13 @@ if (!gotTheLock) {
   // Create mainWindow, load the rest of the app, etc...
   app.whenReady().then(() => {
     createWindow();
+    if (process.platform === "linux") {
+      GivePermission()
+
+    }
+    // setupSudoersForInputDevices()
     // setInterval(logCursorPosition, 10000);
+
   });
 
   app.on("open-url", (event, url) => {
@@ -111,65 +148,191 @@ app.on("activate", () => {
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
+
   }
 });
 
 //ss-logic
 
 ipcMain.on("capture-screenshot", async (event) => {
-  const screenShotInfo = await captureScreen();
+  if (process.platform == "linux") {
 
-  const dataURL = screenShotInfo.toDataURL();
+    console.log("you are in linux")
+    const screenshotProcess = exec(
+      "gnome-screenshot -d 2 -f screenshotoll.png",
+      (error, stdout, stderr) => {
+        if (error) {
+          console.error(`Error: ${error.message}`);
+          return;
+        }
+        if (stderr) {
+          console.error(`stderr: ${stderr}`);
+          return;
+        }
+        console.log(`stdout: ${stdout}`);
 
-  if (dataURL) {
-    const notification = new Notification({
-      title: "Screenshot Taken",
-      body: "Screenshot has been captured successfully",
+        fs.readFile("screenshotoll.png", (err, data) => {
+          if (err) {
+            console.error(`Error reading file: ${err}`);
+            return;
+          }
+
+          const screenshotBlob = new Blob([data], { type: "image/png" });
+
+          const notification = new Notification({
+            title: "Screenshot Taken",
+            body: "Screenshot has been captured successfully",
+          });
+          notification.show();
+
+        });
+      }
+    );
+
+    screenshotProcess.on("error", (err) => {
+      console.error(`Failed to execute screenshot command: ${err}`);
     });
-    notification.show();
+
+    screenshotProcess.on("exit", (code) => {
+      if (code !== 0) {
+        console.error(`Screenshot command exited with code ${code}`);
+      } else {
+        console.log("Screenshot taken successfully");
+      }
+    });
+  } else {
+
+    const screenShotInfo = await captureScreen();
+
+    const dataURL = screenShotInfo.toDataURL();
+
+    if (dataURL) {
+      const notification = new Notification({
+        title: "Screenshot Taken",
+        body: "Screenshot has been captured successfully",
+      });
+      notification.show();
+
+      event.sender.send("screenshot-captured", dataURL);
+    }
   }
-  event.sender.send("screenshot-captured", dataURL);
 });
 
-async function captureScreen() {
-  const displays = screen.getAllDisplays();
-  const primaryDisplay = displays.find(
-    (display) => display.id === screen.getPrimaryDisplay().id
-  );
+// ipcMain.on("capture-screenshot", async (event) => {
+//   const screenShotInfo = await captureScreen();
 
-  // const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
-  // const thumbnailWidth = 100; // Set your desired thumbnail width
-  // const thumbnailHeight = thumbnailWidth / aspectRatio;
+//   const dataURL = screenShotInfo.toDataURL();
 
-  const options = {
-    types: ["screen"],
-    thumbnailSize: {
-      // Set to a high static value
-      width: 1920,
-      height: 1080,
-    },
-    fetchWindowIcons: false,
-    screen: {
-      id: primaryDisplay.id,
-    },
-  };
+//   if (dataURL) {
+//     const notification = new Notification({
+//       title: "Screenshot Taken",
+//       body: "Screenshot has been captured successfully",
+//     });
+//     notification.show();
+//   }
+//   event.sender.send("screenshot-captured", dataURL);
+// });
 
-  const sources = await desktopCapturer.getSources(options);
+// async function captureScreen() {
+//   const displays = screen.getAllDisplays();globalShortcut
+//   const primaryDisplay = displays.find(
+//     (display) => display.id === screen.getPrimaryDisplay().id
+//   );
 
-  const image = sources[0].thumbnail;
-  return image;
+//   // const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
+//   // const thumbnailWidth = 100; // Set your desired thumbnail width
+//   // const thumbnailHeight = thumbnailWidth / aspectRatio;
+
+//   const options = {
+//     types: ["screen"],
+//     thumbnailSize: {
+//       // Set to a high static value
+//       width: 1920,
+//       height: 1080,
+//     },
+//     fetchWindowIcons: false,
+//     screen: {
+//       id: primaryDisplay.id,
+//     },
+//   };
+
+//   const sources = await desktopCapturer.getSources(options);
+
+//   const image = sources[0].thumbnail;
+//   return image;
+// }
+
+function GivePermission() {
+  // Command to give permission to the mouse
+  const commandMouse = "chmod a+r /dev/input/mice";
+
+  // Command to give permission to the keyboard
+  const eventNumber = getInputDevicePath();
+  console.log(eventNumber);
+  const commandKeyboard = `chmod a+r ${eventNumber}`;
+
+  // Prompt for sudo password for both commands
+  sudoPrompt.exec(`${commandMouse} && ${commandKeyboard}`, { name: 'Your Electron App' }, function (error, stdout, stderr) {
+    if (error) {
+      console.error('Error:', error);
+      return;
+    }
+
+    // Command executed successfully
+    console.log('stdout:', stdout);
+  });
+
 }
+// function GivePermission() {
+//   try {
+//     // Command to give permission to the mouse
+//     const commandMouse = "sudo chmod a+r /dev/input/mice";
+
+//     // Command to give permission to the keyboard
+//     const eventNumber = getInputDevicePath();
+//     const commandKeyboard = `sudo chmod a+r /dev/input/event${eventNumber}`;
+
+//     // Execute commands synchronously
+//     const mouseOutput = execSync(commandMouse);
+//     console.log('Mouse permission granted:', mouseOutput.toString());
+
+//     const keyboardOutput = execSync(commandKeyboard);
+//     console.log('Keyboard permission granted:', keyboardOutput.toString());
+
+//   } catch (error) {
+//     console.error('Error:', error.message);
+//   }
+// }
+
+
+let mouseChild;
 
 function startMouseMovementDetection() {
   console.log("Mouse movement detection started.");
 
-  const mouseCommand = "cat /dev/input/mice";
-  const mouseChild = exec(mouseCommand);
+  const mouseCommand = "cat";
+  const args = ["/dev/input/mice"];
+
+  mouseChild = spawn(mouseCommand, args);
 
   mouseChild.stdout.on("data", (data) => {
-    if (data) {
-      console.log("mouse is moving");
-      console.count(data);
+    if (data && mouseChild && !userIsIdle) {
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const foridletimeChecker = timestamp.getTime();
+      movementTimestampsforidle.push(foridletimeChecker);
+      // console.log(movementTimestampsforidle, "idletimestamps");
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+        // console.log(newTimestamp);
+        console.log(movementTimestamps, "arr");
+      }
+      if (movementTimestamps.length > idleCalctimeinSeconds) {
+        movementTimestamps.shift();
+      }
     }
   });
 
@@ -180,22 +343,36 @@ function startMouseMovementDetection() {
   mouseChild.on("exit", (code) => {
     console.log("Mouse movement detection process exited with code", code);
   });
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-    mouseChild.kill();
-  });
 }
+
+let keyboardChild;
 
 function startKeyboardMovementDetection() {
   console.log("Keyboard movement detection started.");
   const inputDevice = getInputDevicePath();
 
-  const keyboardCommand = `cat ${inputDevice} `;
-  const keyboardChild = exec(keyboardCommand);
+  const keyboardCommand = "cat";
+  const args = [inputDevice];
+
+  keyboardChild = spawn(keyboardCommand, args);
 
   keyboardChild.stdout.on("data", (data) => {
-    console.log(data);
+    if (data && keyboardChild && !userIsIdle) {
+      const timestamp = new Date();
+      const min = timestamp.getMinutes();
+      const foridletimeChecker = timestamp.getTime();
+      movementTimestampsforidle.push(foridletimeChecker);
+      const sec = timestamp.getSeconds();
+      const newTimestamp = min + ":" + sec;
+      if (!movementTimestamps.includes(newTimestamp)) {
+        movementTimestamps.push(newTimestamp);
+        // console.log(newTimestamp);
+        console.log(movementTimestamps, "arra");
+      }
+      if (movementTimestamps.length > idleCalctimeinSeconds) {
+        movementTimestamps.shift();
+      }
+    }
   });
 
   keyboardChild.on("error", (err) => {
@@ -204,11 +381,6 @@ function startKeyboardMovementDetection() {
 
   keyboardChild.on("exit", (code) => {
     console.log("Keyboard movement detection process exited with code", code);
-  });
-
-  mainWindow.on("closed", () => {
-    mainWindow = null;
-    keyboardChild.kill();
   });
 }
 
@@ -232,13 +404,11 @@ function executeCommand(cmd) {
 
 function getInputDevicePath() {
   const eventNumber = executeCommand(COMMAND_GET_INPUT_DEVICE_EVENT_NUMBER);
+  console.log(eventNumber, "event")
   return `/dev/input/event${eventNumber}`;
 }
 
-let movementTimestamps = [];
-let movementTimestampsforidle = [];
-let userIsIdle = false;
-let idleCalctimeinSeconds = 120;
+
 
 ipcMain.on("IdlerimehasbeenAdded", (event) => {
   userIsIdle = false;
@@ -376,31 +546,48 @@ function startKeyboardMovementDetectionWin() {
 
 function stopDetection() {
   movementTimestamps = [];
-  if (keyBoardDetectionWin) {
-    keyBoardDetectionWin.kill();
-    console.log("Keyboard detection process killed");
-    keyBoardDetectionWin.on("exit", (code, signal) => {
-      console.log(
-        `Keyboard detection process exited with code ${code} and signal ${signal}`
-      );
-    });
-    keyBoardDetectionWin = null;
+  if (process.platform === "win32") {
+    if (keyBoardDetectionWin) {
+      keyBoardDetectionWin.kill();
+      console.log("Keyboard detection process killed");
+      keyBoardDetectionWin.on("exit", (code, signal) => {
+        console.log(
+          `Keyboard detection process exited with code ${code} and signal ${signal}`
+        );
+      });
+      keyBoardDetectionWin = null;
+    }
+
+    if (mouseDetectionWin) {
+      mouseDetectionWin.kill();
+      console.log("Mouse detection process killed");
+      mouseDetectionWin.on("exit", (code, signal) => {
+        console.log(
+          `Mouse detection process exited with code ${code} and signal ${signal}`
+        );
+      });
+      mouseDetectionWin = null;
+    }
+
+    if (!keyBoardDetectionWin && !mouseDetectionWin) {
+      console.log("No keyboard or mouse detection processes running");
+    }
+
+  } else if (process.platform === "linux") {
+    if (mouseChild) {
+      console.log("Stopping mouse movement detection.");
+      mouseChild.kill("SIGTERM");
+    } else {
+      console.log("Mouse movement detection is not running.");
+    }
+    if (keyboardChild) {
+      console.log("Stopping keyboard movement detection.");
+      keyboardChild.kill("SIGTERM");
+    } else {
+      console.log("Keyboard movement detection is not running.");
+    }
   }
 
-  if (mouseDetectionWin) {
-    mouseDetectionWin.kill();
-    console.log("Mouse detection process killed");
-    mouseDetectionWin.on("exit", (code, signal) => {
-      console.log(
-        `Mouse detection process exited with code ${code} and signal ${signal}`
-      );
-    });
-    mouseDetectionWin = null;
-  }
-
-  if (!keyBoardDetectionWin && !mouseDetectionWin) {
-    console.log("No keyboard or mouse detection processes running");
-  }
 }
 
 let cronJob;
@@ -438,6 +625,51 @@ ipcMain.on("ping", () => {
       }
 
       mainWindow.webContents.send("screenshot-captured", dataURL);
+    } else if (process.platform === "linux") {
+      const screenshotProcess = exec(
+        "gnome-screenshot -d 2 -f screenshotoll.png",
+        (error, stdout, stderr) => {
+          if (error) {
+            console.error(`Error: ${error.message}`);
+            return;
+          }
+          if (stderr) {
+            console.error(`stderr: ${stderr}`);
+            return;
+          }
+          console.log(`stdout: ${stdout}`);
+
+          fs.readFile("screenshotoll.png", (err, data) => {
+            if (err) {
+              console.error(`Error reading file: ${err}`);
+              return;
+            }
+
+            const screenshotBlob = new Blob([data], { type: "image/png" });
+            console.log(screenshotBlob)
+
+            const notification = new Notification({
+              title: "Screenshot Taken",
+              body: "Screenshot has been captured successfully",
+            });
+            notification.show();
+
+          });
+        }
+      );
+
+      screenshotProcess.on("error", (err) => {
+        console.error(`Failed to execute screenshot command: ${err}`);
+      });
+
+      screenshotProcess.on("exit", (code) => {
+        if (code !== 0) {
+          console.error(`Screenshot command exited with code ${code}`);
+        } else {
+          console.log("Screenshot taken successfully");
+        }
+      });
+
     }
 
     calculateActivityPercentage(movementTimestamps, idleCalctimeinSeconds);
