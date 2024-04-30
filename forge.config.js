@@ -7,7 +7,9 @@ module.exports = {
     asar: true,
     extraResource:[
      './MouseTracker.exe',
-     './keyboardtracker.exe'
+     './keyboardtracker.exe',
+     './keyboardmac',
+     './mousemac'
     ]
   },
   rebuildConfig: {},
@@ -27,6 +29,19 @@ module.exports = {
     {
       name: '@electron-forge/maker-rpm',
       config: {},
+    },
+    {
+      name: '@electron-forge/maker-dmg',
+      config: {
+        overwrite: true,
+        // icon: './path/to/app-icon.icns',
+        // background: './path/to/dmg-background.png',
+        contents: (options) => [
+          { x: 448, y: 344, type: 'link', path: '/Applications' },
+          { x: 192, y: 344, type: 'file', path: options.appPath }
+        ],
+        format: 'ULFO' // macOS 11 and newer requires ULFO format for notarization.
+      }
     },
   ],
   plugins: [

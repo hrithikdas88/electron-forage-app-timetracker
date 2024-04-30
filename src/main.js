@@ -17,6 +17,7 @@ const { spawn } = require("child_process");
 const isPackaged = require("electron").app.isPackaged;
 const cron = require("node-cron");
 const sudoPrompt = require('sudo-prompt');
+const { platform } = require("os");
 
 
 // function setupSudoersForInputDevices() {
@@ -93,7 +94,8 @@ if (!gotTheLock) {
     createWindow();
     if (process.platform === "linux") {
       GivePermission()
-
+    } else if (process.platform === "darwin"){
+      // startMouseMovementDetectionMac()
     }
     // setupSudoersForInputDevices()
     // setInterval(logCursorPosition, 10000);
@@ -218,49 +220,49 @@ ipcMain.on("capture-screenshot", async (event) => {
   }
 });
 
-// ipcMain.on("capture-screenshot", async (event) => {
-//   const screenShotInfo = await captureScreen();
+ipcMain.on("capture-screenshot", async (event) => {
+  const screenShotInfo = await captureScreen();
 
-//   const dataURL = screenShotInfo.toDataURL();
+  const dataURL = screenShotInfo.toDataURL();
 
-//   if (dataURL) {
-//     const notification = new Notification({
-//       title: "Screenshot Taken",
-//       body: "Screenshot has been captured successfully",
-//     });
-//     notification.show();
-//   }
-//   event.sender.send("screenshot-captured", dataURL);
-// });
+  if (dataURL) {
+    const notification = new Notification({
+      title: "Screenshot Taken",
+      body: "Screenshot has been captured successfully",
+    });
+    notification.show();
+  }
+  event.sender.send("screenshot-captured", dataURL);
+});
 
-// async function captureScreen() {
-//   const displays = screen.getAllDisplays();globalShortcut
-//   const primaryDisplay = displays.find(
-//     (display) => display.id === screen.getPrimaryDisplay().id
-//   );
+async function captureScreen() {
+  const displays = screen.getAllDisplays(); globalShortcut
+  const primaryDisplay = displays.find(
+    (display) => display.id === screen.getPrimaryDisplay().id
+  );
 
-//   // const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
-//   // const thumbnailWidth = 100; // Set your desired thumbnail width
-//   // const thumbnailHeight = thumbnailWidth / aspectRatio;
+  // const aspectRatio = primaryDisplay.size.width / primaryDisplay.size.height;
+  // const thumbnailWidth = 100; // Set your desired thumbnail width
+  // const thumbnailHeight = thumbnailWidth / aspectRatio;
 
-//   const options = {
-//     types: ["screen"],
-//     thumbnailSize: {
-//       // Set to a high static value
-//       width: 1920,
-//       height: 1080,
-//     },
-//     fetchWindowIcons: false,
-//     screen: {
-//       id: primaryDisplay.id,
-//     },
-//   };
+  const options = {
+    types: ["screen"],
+    thumbnailSize: {
+      // Set to a high static value
+      width: 1920,
+      height: 1080,
+    },
+    fetchWindowIcons: false,
+    screen: {
+      id: primaryDisplay.id,
+    },
+  };
 
-//   const sources = await desktopCapturer.getSources(options);
+  const sources = await desktopCapturer.getSources(options);
 
-//   const image = sources[0].thumbnail;
-//   return image;
-// }
+  const image = sources[0].thumbnail;
+  return image;
+}
 
 function GivePermission() {
   // Command to give permission to the mouse
@@ -459,19 +461,87 @@ function calculateActivityPercentage(arr, val) {
 }
 // }
 
+// let mouseDetectionWin;
+
+// function startMouseMovementDetectionwin() {
+//   console.log(isPackaged);
+//   let pythonScriptPath;
+
+//   if (isPackaged) {
+//     pythonScriptPath = process.platform === "win32" 
+//       ? path.join(process.resourcesPath, 'extraResources', 'MouseTracker.exe')
+//       : path.join(process.resourcesPath, 'mousemac'); 
+//   } else {
+//     pythonScriptPath = process.platform === "win32"
+//       ? "./MouseTracker.exe"
+//       : "./mousemac";
+//   }
+
+//   if (!fs.existsSync(pythonScriptPath)) {
+//     dialog.showErrorBox("Error", "Mouse tracking file not found.");
+//     return;
+//   }
+
+//   // Ensure the file is executable
+//   if (process.platform !== 'win32') {
+//     fs.chmod(pythonScriptPath, 0o755, (err) => {
+//       if (err) {
+//         dialog.showErrorBox("Error", "Failed to set executable permissions.");
+//         return;
+//       }
+//       runMouseDetection(pythonScriptPath);
+//     });
+//   } else {
+//     dialog.showErrorBox("Permission", "itsworking")
+//     runMouseDetection(pythonScriptPath);
+//   }
+// }
+
+// function runMouseDetection(pythonScriptPath) {
+//   mouseDetectionWin = spawn(pythonScriptPath);
+
+//   mouseDetectionWin.stdout.on("data", (data) => {
+//     console.log(`stdout: ${data}`);
+//     console.log(data)
+//   });
+
+//   mouseDetectionWin.stderr.on("data", (data) => {
+//     console.error(`stderr: ${data}`);
+//     dialog.showErrorBox("Error", `${data}`);
+//   });
+
+//   mouseDetectionWin.on("close", (code) => {
+//     console.log(`Child process exited with code ${code}`);
+//   });
+// }
+
 let mouseDetectionWin;
 function startMouseMovementDetectionwin() {
   console.log(isPackaged);
-  const pythonScriptPath = isPackaged
-    ? path.join("./resources/MouseTracker.exe")
-    : path.join("./MouseTracker.exe");
+  // const pythonScriptPath = isPackaged
+  //   ? path.join("./resources/MouseTracker.exe")
+  //   : path.join("./MouseTracker.exe");
 
-  // if (!fs.existsSync(pythonScriptPath)) {
-  //   dialog.showErrorBox("Error", "MouseTracker.exe file not found.");
-  //   return;
-  // }
+  let pythonScriptPath;
 
-  mouseDetectionWin = exec(pythonScriptPath);
+  if (isPackaged) {
+    pythonScriptPath = process.platform === "win32" 
+    ? path.join(process.resourcesPath, 'extraResources', 'MouseTracker.exe')
+    : path.join(process.resourcesPath, 'mousemac'); 
+  } else {
+    pythonScriptPath = process.platform === "win32"
+      ? "./MouseTracker.exe"
+      : "./mousemac";
+  }
+
+  if (!fs.existsSync(pythonScriptPath)) {
+    dialog.showErrorBox("Error", "MouseTracker.exe file not found.");
+    return;
+  }
+// 
+
+  mouseDetectionWin = spawn(pythonScriptPath);
+
 
   mouseDetectionWin.stdout.on("data", (data) => {
     if (data && mouseDetectionWin && !userIsIdle) {
@@ -496,25 +566,35 @@ function startMouseMovementDetectionwin() {
 
   mouseDetectionWin.stderr.on("data", (data) => {
     console.error(`stderr: ${data}`);
+    dialog.showErrorBox("Error", `${data}`);
   });
 
   mouseDetectionWin.on("close", (code) => {
+    // dialog.showErrorBox("Error", `existed with ${code}`);
     console.log(`child process exited with code ${code}`);
   });
 }
 
 let keyBoardDetectionWin;
+
+console.log(process.resourcesPath)
 function startKeyboardMovementDetectionWin() {
-  const pythonScriptPath = isPackaged
-    ? path.join("./resources/keyboardtracker.exe")
-    : path.join("./keyboardtracker.exe");
+  let pythonScriptPath;
+  if (isPackaged) {
+    pythonScriptPath = process.platform === "win32" 
+    ? path.join(process.resourcesPath, 'extraResources', 'Keyboardtracker.exe') // Windows path
+    : path.join(process.resourcesPath, 'keyboardmac'); 
+  } else {
+    pythonScriptPath = process.platform === "win32"
+      ? "./Keyboardtracker.exe"
+      : "./keyboardmac";
+  }
+  if (!fs.existsSync(pythonScriptPath)) {
+    dialog.showErrorBox("Error", "keyboardtracker file not found.");
+    return;
+  }
 
-  // if (!fs.existsSync(pythonScriptPath)) {
-  //   dialog.showErrorBox("Error", "keyboardtracker.exe file not found.");
-  //   return;
-  // }
-
-  keyBoardDetectionWin = exec(pythonScriptPath);
+  keyBoardDetectionWin = spawn(pythonScriptPath);
 
   keyBoardDetectionWin.stdout.on("data", (data) => {
     if (data && keyBoardDetectionWin && !userIsIdle) {
@@ -536,17 +616,19 @@ function startKeyboardMovementDetectionWin() {
   });
 
   keyBoardDetectionWin.stderr.on("data", (data) => {
+    dialog.showErrorBox("Error", `${data} keyboard`);
     console.error(`stderr: ${data}`);
   });
-
   keyBoardDetectionWin.on("close", (code) => {
+    // dialog.showErrorBox("Error", `${code}keyboard existed`);
     console.log(`child process exited with code ${code}`);
+
   });
 }
 
 function stopDetection() {
   movementTimestamps = [];
-  if (process.platform === "win32") {
+  if (process.platform === "win32" || process.platform === "darwin") {
     if (keyBoardDetectionWin) {
       keyBoardDetectionWin.kill();
       console.log("Keyboard detection process killed");
@@ -606,8 +688,8 @@ ipcMain.on("ping", () => {
   if (process.platform === "linux") {
     startMouseMovementDetection();
     startKeyboardMovementDetection();
-  } else if (process.platform === "win32") {
-    console.log("youareonwindows");
+  } else {
+    console.log(process.platform);
     startKeyboardMovementDetectionWin();
     startMouseMovementDetectionwin();
   }
@@ -687,3 +769,35 @@ ipcMain.on("stopPing", () => {
     console.log("No cron job to stop");
   }
 });
+
+// function startMouseMovementDetectionMac() {
+//   console.log("Starting mouse movement detection...");
+
+//   // Spawn the compiled Objective-C binary
+//   const detectionProcess = spawn('./mouse_movement_detection');
+  
+
+//   // Listen for stdout data from the child process
+//   detectionProcess.stdout.on('data', (data) => {
+//       console.log(data.toString());
+//   });
+
+//   // Listen for stderr data from the child process
+//   detectionProcess.stderr.on('data', (data) => {
+//     //  console.error(`Error: ${data}`);
+//       console.log("heyeyeyeye")
+//   });
+
+//   // Listen for when the child process exits
+//   detectionProcess.on('close', (code) => {
+//       console.log(`Mouse movement detection process exited with code ${code}`);
+//   });
+
+//   // Handle cleanup
+//   process.on('SIGINT', () => {
+//       detectionProcess.kill();
+//       process.exit(0);
+//   });
+// }
+
+

@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld("startdetection", () => {
 contextBridge.exposeInMainWorld("stopdetection", () => {
   ipcRenderer.send("stopPing");
 });
+
+
 let indexBridge = {
   authSucess: (callback) => ipcRenderer.on("content-to-renderer", callback),
 };
